@@ -1,1 +1,1 @@
-rootProject.name = "Test1"
+rootProject.name = "HytaleKotlinTemplate"

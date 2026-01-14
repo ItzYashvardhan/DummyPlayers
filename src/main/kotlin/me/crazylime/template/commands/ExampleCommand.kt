@@ -1,4 +1,4 @@
-package me.justlime.template.commands
+package me.crazylime.template.commands
 
 import com.hypixel.hytale.protocol.GameMode
 import com.hypixel.hytale.server.core.Message

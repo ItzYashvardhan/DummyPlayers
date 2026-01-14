@@ -1,4 +1,4 @@
-package me.justlime.template.commands
+package me.crazylime.template.commands
 
 import com.hypixel.hytale.common.plugin.PluginManifest
 import com.hypixel.hytale.server.core.command.system.CommandRegistry

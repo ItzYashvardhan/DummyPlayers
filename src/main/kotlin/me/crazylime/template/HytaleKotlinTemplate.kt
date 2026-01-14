@@ -1,9 +1,9 @@
-package me.justlime.template
+package me.crazylime.template
 
 import com.hypixel.hytale.logger.HytaleLogger
 import com.hypixel.hytale.server.core.plugin.JavaPlugin
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit
-import me.justlime.template.commands.CommandManager
+import me.crazylime.template.commands.CommandManager
 
 class HytaleKotlinTemplate(init: JavaPluginInit) : JavaPlugin(init) {
     val hytaleLogger: HytaleLogger = HytaleLogger.forEnclosingClass()
