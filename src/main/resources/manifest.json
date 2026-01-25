@@ -1,14 +1,14 @@
 {
-  "Group": "Example",
-  "Name": "ExamplePlugin",
-  "Version": "0.0.1",
-  "Description": "An example plugin for HyTale!",
+  "Group": "JustLime",
+  "Name": "DummyPlayers",
+  "Version": "1.0",
+  "Description": "Add Dummy Players to your hytale server!",
   "Authors": [
     {
-      "Name": "CrazyLime"
+      "Name": "Yashvardhan"
     }
   ],
-  "Website": "example.org",
+  "Website": "https://discord.gg/rVsUJ4keZN",
   "ServerVersion": "*",
   "Dependencies": {
 
@@ -17,6 +17,6 @@
 
   },
   "DisabledByDefault": false,
-  "Main": "me.codelime.template.DummyPlayer",
+  "Main": "me.justlime.dummyplayer.DummyPlayerPlugin",
   "IncludesAssetPack": true
 }

@@ -10,9 +10,9 @@ plugins {
     id("org.jetbrains.gradle.plugin.idea-ext") version "1.3"
 }
 
-group = "me.crazylime.template"
-version = "1.0.0"
-description = "An example plugin for HyTale!"
+group = "me.justlime.dummyplayer"
+version = "1.0"
+description = "Add Dummy Players to your hytale server!"
 
 // Root Path for Hytale
 val hytaleServerRoot = "E:\\Hytale\\Server-EA\\2026.01.13-dcad8778f"
@@ -23,9 +23,9 @@ repositories {
 }
 
 dependencies {
-    implementation(files("$hytaleServerRoot\\Server\\HytaleServer.jar"))
+    compileOnly(files("$hytaleServerRoot\\Server\\HytaleServer.jar"))
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-    implementation("com.google.code.gson:gson:2.10.1")
+    compileOnly("com.google.code.gson:gson:2.10.1")
     implementation("org.jetbrains:annotations:24.1.0")
 }
 
@@ -74,7 +74,7 @@ tasks{
         archiveClassifier.set("")
 
         // Relocate dependencies to avoid conflicts
-        relocate("com.google.gson", "com.template.libs.gson")
+        relocate("com.google.gson", "me.codelime.dummyplayer.gson")
 
         // Minimize JAR size (removes unused classes)
         minimize()
@@ -99,7 +99,7 @@ idea {
 
                     val args = mutableListOf(
                         "--allow-op",
-                        "--assets=$hytaleServerRoot\\Server\\Assets.zip"
+                        "--assets=$hytaleServerRoot\\Assets.zip"
                     )
 
                     val modPath = sourceSets.main.get().java.srcDirs.first().parentFile.absolutePath
