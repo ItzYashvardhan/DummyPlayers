@@ -29,7 +29,7 @@ dependencies {
     implementation("org.jetbrains:annotations:24.1.0")
 }
 
-val targetJavaVersion = 21
+val targetJavaVersion = 25
 kotlin {
     jvmToolchain(targetJavaVersion)
 }

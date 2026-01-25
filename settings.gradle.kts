@@ -1,1 +1,1 @@
-rootProject.name = "HytaleKotlinTemplate"
+rootProject.name = "DummyPlayer"

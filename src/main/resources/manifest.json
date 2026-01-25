@@ -17,6 +17,6 @@
 
   },
   "DisabledByDefault": false,
-  "Main": "me.crazylime.template.HytaleKotlinTemplate",
+  "Main": "me.codelime.template.DummyPlayer",
   "IncludesAssetPack": true
 }
