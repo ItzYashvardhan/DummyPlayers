@@ -10,9 +10,7 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayer
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
-import me.justlime.dummyplayer.ai.FollowBehavior
-import me.justlime.dummyplayer.behaviour.DummyAI
-import me.justlime.dummyplayer.impl.DummyPlayerFactory
+
 class FollowCommand : AbstractPlayerCommand("follow", "Make a dummy follow you") {
     var dummyNameArg: RequiredArg<String> = withRequiredArg("dummy", "Dummy Name", ArgTypes.STRING)
     
@@ -28,7 +26,7 @@ class FollowCommand : AbstractPlayerCommand("follow", "Make a dummy follow you")
         val dummyName = dummyNameArg.get(context)
         val targetName = playerRef.username
         
-        if (_root_ide_package_.me.justlime.dummyplayer.impl.DummyPlayerFactory.getDummy(dummyName) != null) {
+        if (_root_ide_package_.me.justlime.dummyplayer.service.DummyPlayerFactory.getDummy(dummyName) != null) {
             // Clear previous behaviors to avoid conflicts (optional)
             _root_ide_package_.me.justlime.dummyplayer.behaviour.DummyAI.clearBehaviors(dummyName)
             _root_ide_package_.me.justlime.dummyplayer.behaviour.DummyAI.addBehavior(dummyName,

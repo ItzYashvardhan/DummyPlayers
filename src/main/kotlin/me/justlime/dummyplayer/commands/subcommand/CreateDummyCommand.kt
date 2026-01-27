@@ -13,7 +13,7 @@ import com.hypixel.hytale.server.core.modules.entity.player.PlayerSkinComponent
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
-import me.justlime.dummyplayer.impl.DummyPlayerFactory
+import me.justlime.dummyplayer.service.DummyPlayerFactory
 
 class CreateDummyCommand : AbstractPlayerCommand("create", "Create a dummy player") {
     var nameArgument: RequiredArg<String> = withRequiredArg("name", "Provide Player Name", ArgTypes.STRING)
@@ -27,6 +27,12 @@ class CreateDummyCommand : AbstractPlayerCommand("create", "Create a dummy playe
         world: World
     ) {
         val name = nameArgument.get(context)
+
+        if (DummyPlayerFactory.getDummy(name) != null) {
+            context.sendMessage(Message.raw("A dummy with the name '$name' already exists!"))
+            return
+        }
+
         val transform = world.entityStore.store.getComponent(refStore, TransformComponent.getComponentType())
         val position = transform?.position ?: Vector3d(0.0, 0.0, 0.0)
 
@@ -34,7 +40,7 @@ class CreateDummyCommand : AbstractPlayerCommand("create", "Create a dummy playe
         val skinComponent = world.entityStore.store.getComponent(refStore, PlayerSkinComponent.getComponentType())
         val skin = skinComponent?.playerSkin
 
-        _root_ide_package_.me.justlime.dummyplayer.impl.DummyPlayerFactory.spawnDummy(world, name, position, skin)
+        DummyPlayerFactory.spawnDummy(world, name, position, skin)
         context.sendMessage(Message.raw("Created dummy player: $name"))
     }
 }

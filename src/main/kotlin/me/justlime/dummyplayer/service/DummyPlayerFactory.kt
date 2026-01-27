@@ -1,4 +1,4 @@
-package me.justlime.dummyplayer.impl
+package me.justlime.dummyplayer.service
 
 import com.hypixel.hytale.component.Holder
 import com.hypixel.hytale.component.Ref
@@ -7,10 +7,12 @@ import com.hypixel.hytale.math.vector.Transform
 import com.hypixel.hytale.math.vector.Vector3d
 import com.hypixel.hytale.math.vector.Vector3f
 import com.hypixel.hytale.protocol.PlayerSkin
+import com.hypixel.hytale.protocol.ProtocolSettings
 import com.hypixel.hytale.protocol.packets.interface_.AddToServerPlayerList
 import com.hypixel.hytale.protocol.packets.interface_.RemoveFromServerPlayerList
 import com.hypixel.hytale.protocol.packets.interface_.ServerPlayerListPlayer
 import com.hypixel.hytale.server.core.Message
+import com.hypixel.hytale.server.core.auth.PlayerAuthentication
 import com.hypixel.hytale.server.core.cosmetics.CosmeticsModule
 import com.hypixel.hytale.server.core.entity.UUIDComponent
 import com.hypixel.hytale.server.core.entity.damage.DamageDataComponent
@@ -18,6 +20,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player
 import com.hypixel.hytale.server.core.entity.knockback.KnockbackComponent
 import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent
 import com.hypixel.hytale.server.core.entity.nameplate.Nameplate
+import com.hypixel.hytale.server.core.io.ProtocolVersion
 import com.hypixel.hytale.server.core.modules.entity.component.*
 import com.hypixel.hytale.server.core.modules.entity.player.ChunkTracker
 import com.hypixel.hytale.server.core.modules.entity.player.PlayerSkinComponent
@@ -28,6 +31,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.Universe
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
+import io.netty.channel.embedded.EmbeddedChannel
 import me.justlime.dummyplayer.packets.DummyPacketHandler
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
@@ -41,26 +45,29 @@ object DummyPlayerFactory {
 
     fun spawnDummy(
         world: World,
-        name: String,
+        username: String,
         position: Vector3d,
         skin: PlayerSkin? = null
     ): CompletableFuture<Ref<EntityStore>?> {
-        val existingRef = dummies[name]
+        val existingRef = dummies[username]
         if (existingRef != null) {
             if (existingRef.isValid) {
                 return CompletableFuture.completedFuture(null)
             }
-            dummies.remove(name)
+            dummies.remove(username)
         }
 
         val uuid = UUID.randomUUID()
         val holder = EntityStore.REGISTRY.newHolder()
-        val dummyHandler = _root_ide_package_.me.justlime.dummyplayer.packets.DummyPacketHandler()
+        val embeddedChannel = EmbeddedChannel()
+        val protocolVersion = ProtocolVersion(ProtocolSettings.PROTOCOL_VERSION)
+        val authentication =  PlayerAuthentication(uuid, username)
+        val dummyHandler = DummyPacketHandler(embeddedChannel, protocolVersion, authentication)
         val chunkTracker = ChunkTracker()
 
-        val playerRef = PlayerRef(holder, uuid, name, "en_US", dummyHandler, chunkTracker)
+        val playerRef = PlayerRef(holder, uuid, username, "en_US", dummyHandler, chunkTracker)
 
-        setupHolderComponents(holder, playerRef, chunkTracker, uuid, skin, dummyHandler, name)
+        setupHolderComponents(holder, playerRef, chunkTracker, uuid, skin, dummyHandler, username)
 
         modifyUniversePlayersMap { it[uuid] = playerRef }
 
@@ -73,8 +80,8 @@ object DummyPlayerFactory {
             if (ref != null) {
                 val entityRef = ref.reference
                 if (entityRef != null) {
-                    dummies[name] = entityRef
-                    broadcastAddPlayer(world, uuid, name)
+                    dummies[username] = entityRef
+                    broadcastAddPlayer(world, uuid, username)
                     return@thenApply entityRef
                 }
             }
@@ -102,6 +109,10 @@ object DummyPlayerFactory {
 
     fun getDummy(name: String): Ref<EntityStore>? {
         return dummies[name]
+    }
+
+    fun getDummyNames(): List<String> {
+        return dummies.keys.toList()
     }
 
     fun cloneDummy(
@@ -134,7 +145,7 @@ object DummyPlayerFactory {
         chunkTracker: ChunkTracker,
         uuid: UUID,
         skin: PlayerSkin?,
-        dummyHandler: me.justlime.dummyplayer.packets.DummyPacketHandler,
+        dummyHandler: DummyPacketHandler,
         name: String
     ) {
         holder.addComponent(PlayerRef.getComponentType(), playerRef)

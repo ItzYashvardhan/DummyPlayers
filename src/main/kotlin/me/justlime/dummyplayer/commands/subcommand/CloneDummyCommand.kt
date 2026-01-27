@@ -11,7 +11,6 @@ import com.hypixel.hytale.server.core.modules.entity.player.PlayerSkinComponent
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
-import me.justlime.dummyplayer.impl.DummyPlayerFactory
 
 class CloneDummyCommand : AbstractPlayerCommand("clone", "Clone a dummy player") {
 
@@ -45,7 +44,7 @@ class CloneDummyCommand : AbstractPlayerCommand("clone", "Clone a dummy player")
 
         // If not found, check our tracked dummies
         if (targetRef == null) {
-            targetRef = _root_ide_package_.me.justlime.dummyplayer.impl.DummyPlayerFactory.getDummy(targetName)
+            targetRef = _root_ide_package_.me.justlime.dummyplayer.service.DummyPlayerFactory.getDummy(targetName)
         }
 
         if (targetRef != null) {
@@ -53,7 +52,7 @@ class CloneDummyCommand : AbstractPlayerCommand("clone", "Clone a dummy player")
             val skinComponent = world.entityStore.store.getComponent(refStore, PlayerSkinComponent.getComponentType())
             val requesterSkin = skinComponent?.playerSkin
 
-            val newRef = _root_ide_package_.me.justlime.dummyplayer.impl.DummyPlayerFactory.cloneDummy(world, targetRef, requesterSkin)
+            val newRef = _root_ide_package_.me.justlime.dummyplayer.service.DummyPlayerFactory.cloneDummy(world, targetRef, requesterSkin)
             context.sendMessage(Message.raw("Cloned $targetName"))
         } else {
             context.sendMessage(Message.raw("Could not find player or dummy: $targetName"))

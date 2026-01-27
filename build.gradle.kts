@@ -11,11 +11,11 @@ plugins {
 }
 
 group = "me.justlime.dummyplayer"
-version = "1.0"
+version = "1.1"
 description = "Add Dummy Players to your hytale server!"
 
 // Root Path for Hytale
-val hytaleServerRoot = "E:\\Hytale\\Server-EA\\2026.01.13-dcad8778f"
+val hytaleServerRoot = "E:\\Hytale\\Server-EA\\2026.01.24-6e2d4fc36"
 
 repositories {
     mavenLocal()
@@ -23,10 +23,11 @@ repositories {
 }
 
 dependencies {
-    compileOnly(files("$hytaleServerRoot\\Server\\HytaleServer.jar"))
+    implementation(files("$hytaleServerRoot\\Server\\HytaleServer.jar"))
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     compileOnly("com.google.code.gson:gson:2.10.1")
     implementation("org.jetbrains:annotations:24.1.0")
+    implementation(files("libs/HyUI-0.5.4-all.jar"))
 }
 
 val targetJavaVersion = 25
@@ -50,7 +51,7 @@ tasks.build {
 
 
 // Reads manifest.json, updates version/pack flags, and writes it into the build output
-tasks{
+tasks {
     processResources {
         val includesPack = true // Set to false if you don't have assets
 

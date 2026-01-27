@@ -1,35 +1,45 @@
 package me.justlime.dummyplayer.packets
 
 import com.hypixel.hytale.protocol.Packet
+import com.hypixel.hytale.protocol.packets.interface_.ServerMessage
+import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.auth.PlayerAuthentication
 import com.hypixel.hytale.server.core.io.ProtocolVersion
 import com.hypixel.hytale.server.core.io.handlers.game.GamePacketHandler
 import io.netty.channel.embedded.EmbeddedChannel
-import java.util.UUID
+import me.justlime.dummyplayer.listener.DummyChatListener
 import java.util.concurrent.CompletableFuture
 
-class DummyPacketHandler : GamePacketHandler(
-    EmbeddedChannel(),
-    ProtocolVersion("DUMMY_HASH"),
-    PlayerAuthentication(UUID.randomUUID(), "Dummy") //Fake Authentication
-) {
+
+class DummyPacketHandler(
+    embeddedChannel: EmbeddedChannel,
+    protocolVersion: ProtocolVersion,
+    authentication: PlayerAuthentication
+) : GamePacketHandler(embeddedChannel, protocolVersion, authentication) {
 
     override fun getIdentifier(): String {
         return "DummyConnection"
     }
 
-    // Discard outgoing packets immediately
+    override fun write(packet: Packet) {
+        if (packet is ServerMessage) {
+            val dummyName = this.auth?.username ?: return
+            val chatType = packet.type
+            val formattedMessage = packet.message ?: return
+            val message = Message(formattedMessage)
+            DummyChatListener.onPacketSend(dummyName, chatType, message)
+            return
+        }
+    }
 
     override fun write(vararg packets: Packet) {
-        // Discard
+        for (p in packets) {
+            write(p)
+        }
     }
 
     override fun writeNoCache(packet: Packet) {
-        // Discard
-    }
-
-    override fun write(packet: Packet) {
-        // Discard
+        write(packet)
     }
 
     override fun setClientReadyForChunksFuture(future: CompletableFuture<Void>) {

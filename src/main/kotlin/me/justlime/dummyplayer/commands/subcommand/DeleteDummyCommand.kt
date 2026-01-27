@@ -10,7 +10,6 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayer
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
-import me.justlime.dummyplayer.impl.DummyPlayerFactory
 
 class DeleteDummyCommand : AbstractPlayerCommand("delete", "Delete a dummy player") {
     var nameArgument: RequiredArg<String> = withRequiredArg("name", "Provide Player Name", ArgTypes.STRING)
@@ -23,7 +22,7 @@ class DeleteDummyCommand : AbstractPlayerCommand("delete", "Delete a dummy playe
         world: World
     ) {
         val name = nameArgument.get(context)
-        if (_root_ide_package_.me.justlime.dummyplayer.impl.DummyPlayerFactory.deleteDummy(world, name)) {
+        if (_root_ide_package_.me.justlime.dummyplayer.service.DummyPlayerFactory.deleteDummy(world, name)) {
             context.sendMessage(Message.raw("Deleted dummy player: $name"))
         } else {
             context.sendMessage(Message.raw("Could not find dummy player: $name"))

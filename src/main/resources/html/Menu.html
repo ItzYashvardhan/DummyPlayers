@@ -1,0 +1,50 @@
+<style>
+    .header {
+    }
+    .selection-text {
+        color: #2b939c;
+        font-weight: bold;
+        font-size: 24;
+    }
+    .chat-container{
+        anchor-height: 700
+    }
+    .tab-content{
+        anchor-height: 1100;
+    }
+</style>
+
+<div class="page-overlay">
+    <div class="container" data-hyui-title="Dummy Manager"  style="anchor-height: 800; anchor-width: 600;">
+        <div class="container-contents">
+            <div class="header"><p class="selection-text">Dummy Selection</p></div>
+            <div style="anchor-height: 8"></div>
+
+            <select id="dummy-list" data-hyui-showlabel="true" value="None" style="anchor-width: 570; anchor-height: 50">
+                <!--All Dummy Names Option-->
+            </select>
+
+            <div style="anchor-height: 20"></div>
+            <nav id="main-tabs" class="tabs"
+                 data-tabs="chat:Chat, behaviour:Behaviour, setting:Setting"
+                 data-selected="chat">
+            </nav>
+
+            <div id="chat-content" class="tab-content" data-hyui-tab-id="chat">
+                <div class="chat-container" id="chat-messages">
+                    <!--Chat Messages Container-->
+                </div>
+                <div><input type="text"></div>
+            </div>
+
+            <div id="behaviour-content" class="tab-content" data-hyui-tab-id="behaviour">
+                <p>Timer examples...</p>
+            </div>
+
+            <div id="setting-content" class="tab-content" data-hyui-tab-id="setting">
+                <p>Component examples...</p>
+            </div>
+        </div>
+
+    </div>
+</div>

@@ -1,7 +1,6 @@
 package me.justlime.dummyplayer.behaviour
 
 import com.hypixel.hytale.server.core.universe.world.World
-import me.justlime.dummyplayer.impl.DummyPlayerFactory
 import java.util.concurrent.ConcurrentHashMap
 
 
@@ -19,7 +18,7 @@ object DummyAI {
 
     fun tick(world: World) {
         behaviors.forEach { (dummyName, behaviorList) ->
-            val dummyRef = _root_ide_package_.me.justlime.dummyplayer.impl.DummyPlayerFactory.getDummy(dummyName)
+            val dummyRef = _root_ide_package_.me.justlime.dummyplayer.service.DummyPlayerFactory.getDummy(dummyName)
             if (dummyRef == null || !dummyRef.isValid) {
                 behaviors.remove(dummyName)
                 return@forEach
