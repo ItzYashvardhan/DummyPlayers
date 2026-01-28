@@ -9,9 +9,9 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 object DummyChatListener {
-    private const val MESSAGE_LIMIT = 15
+    private const val MESSAGE_LIMIT = 20
 
-    // Stores the last 15 messages for each dummy (Key: DummyName, Messages)
+    // Stores the last 20 messages for each dummy (Key: DummyName, Messages)
     private val chatHistory = ConcurrentHashMap<String, MutableList<Message>>()
 
     @ApiStatus.Internal
@@ -26,7 +26,7 @@ object DummyChatListener {
             history.add(message)
         }
 
-        updateUIForViewers(targetPlayerName)
+        UIManager.updateUIForViewers(targetPlayerName)
     }
 
     /**
@@ -36,26 +36,4 @@ object DummyChatListener {
         return chatHistory[dummyName] ?: emptyList()
     }
 
-    private fun updateUIForViewers(dummyName: String) {
-        val viewers = DummySelectorService.getPlayersWatchingDummy(dummyName.uppercase())
-        println("$viewers $dummyName")
-        for (viewerId in viewers) {
-            val uiPair = UIManager.playersDummyUI[viewerId] ?: continue
-            val page = uiPair.first
-            val template = uiPair.second
-            val newLog = getLogForUI(dummyName)
-            newLog.forEach {
-                val player = Universe.get().getPlayer(viewerId)
-                if (player == null) {
-                    println("PlayerNotFound")
-                    return@forEach
-                }
-                val rawText = it.ansiMessage
-                player.sendMessage(Message.raw("[$dummyName] $rawText"))
-            }
-            // Update the template variable
-            template.setVariable("chat_messages", newLog.joinToString { "<p>${it.ansiMessage}</p>" })
-            page.updatePage(false)
-        }
-    }
 }
