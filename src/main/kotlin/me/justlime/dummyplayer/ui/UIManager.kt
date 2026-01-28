@@ -13,95 +13,111 @@ import com.hypixel.hytale.server.core.universe.Universe
 import me.justlime.dummyplayer.listener.DummyChatListener
 import me.justlime.dummyplayer.service.DummyPlayerFactory
 import me.justlime.dummyplayer.service.DummySelectorService
-
+import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 object UIManager {
     data class ChatLine(val text: String)
 
-    val messages: MutableList<ChatLine> = mutableListOf()
+    // Maps Player UUID -> List of ChatLines for their UI view
+    private val playerChatLogs = ConcurrentHashMap<UUID, MutableList<ChatLine>>()
 
     fun open(playerRef: PlayerRef) {
+        val playerUuid = playerRef.uuid
+        val selectedDummy = DummySelectorService.getSelectedDummy(playerUuid)
+
+        // Synchronize UI logs with the actual dummy log before building
+        if (selectedDummy != null) {
+            updatePlayerLogs(playerUuid, selectedDummy)
+        }
+
         val dummyNames = DummyPlayerFactory.getDummyNames()
-        val template = TemplateProcessor().setVariable("messages", messages)
+        val template = TemplateProcessor().setVariable("messages", playerChatLogs[playerUuid] ?: emptyList<ChatLine>())
+
         val pageBuilder = PageBuilder.pageForPlayer(playerRef).loadHtml("Pages/Menu.html", template)
+
         pageBuilder.elements.forEach { elementBuilder ->
-            //Dummy List
+            // Dummy Selector
             if (elementBuilder.id == "dummy-list") {
                 val dropDown = elementBuilder as DropdownBoxBuilder
-                dummyNames.forEach {
-                    dropDown.addEntry(it, it)
-                }
-                dropDown.addEventListener(CustomUIEventBindingType.ValueChanged) { it, ctx ->
-                    DummySelectorService.selectDummy(playerRef.uuid, it)
+                dummyNames.forEach { dropDown.addEntry(it, it) }
+
+                dropDown.addEventListener(CustomUIEventBindingType.ValueChanged) { value, _ ->
+                    DummySelectorService.selectDummy(playerUuid, value)
                     reopen(playerRef)
-                    return@addEventListener
                 }
-                dropDown.withValue(DummySelectorService.getSelectedDummy(playerRef.uuid) ?: "NONE")
+                dropDown.withValue(selectedDummy ?: "NONE")
             }
 
-            //Chat Input
+            // Chat Input
             if (elementBuilder.id == "chat-input") {
                 val textField = elementBuilder as TextFieldBuilder
-                textField.addEventListener(CustomUIEventBindingType.Validating) { input, ctx ->
-                    val selectedDummy = DummySelectorService.getSelectedDummy(playerRef.uuid)
-                    if (selectedDummy == null) {
+                textField.addEventListener(CustomUIEventBindingType.Validating) { input, _ ->
+                    val currentDummy = DummySelectorService.getSelectedDummy(playerUuid)
+                    if (currentDummy == null) {
                         playerRef.sendMessage(Message.raw("You must select a dummy"))
                         return@addEventListener
                     }
-                    val selectedDummyRef = DummyPlayerFactory.getDummy(selectedDummy)
-                    if (selectedDummyRef == null) {
+
+                    val dummyRef = DummyPlayerFactory.getDummy(currentDummy)
+                    if (dummyRef == null) {
                         playerRef.sendMessage(Message.raw("Dummy Ref not found"))
                         return@addEventListener
                     }
-                    sendChat(selectedDummyRef, input)
+
+                    sendChat(dummyRef, input)
                     reopen(playerRef)
-                    return@addEventListener
                 }
             }
         }
-        val store = playerRef.reference?.store
-        if (store == null) {
-            playerRef.sendMessage(Message.raw("Store is null"))
+
+        playerRef.reference?.store?.let { pageBuilder.open(it) }
+            ?: playerRef.sendMessage(Message.raw("Store is null"))
+    }
+
+    /**
+     * Updates the specific log for a player based on the dummy they are watching.
+     */
+    private fun updatePlayerLogs(playerUuid: UUID, dummyName: String) {
+        val newLog = DummyChatListener.getLogForUI(dummyName)
+        val logs = playerChatLogs.computeIfAbsent(playerUuid) { mutableListOf() }
+
+        logs.clear()
+        logs.addAll(newLog.map { ChatLine(it.ansiMessage) })
+    }
+
+    private fun reopen(playerRef: PlayerRef) {
+        val worldUuid = playerRef.worldUuid ?: run {
+            playerRef.sendMessage(Message.raw("Player not in a world!"))
             return
         }
-        pageBuilder.open(store)
 
-
-    }
-
-    private fun reopen(playerRef: PlayerRef): Boolean {
-        val worldUUid = playerRef.worldUuid
-        if (worldUUid == null) {
-            playerRef.sendMessage(Message.raw("Player not in a world!"))
-            return true
-        }
-        val world = Universe.get().getWorld(worldUUid)
-        if (world == null) {
+        val world = Universe.get().getWorld(worldUuid) ?: run {
             playerRef.sendMessage(Message.raw("World not found!"))
-            return true
+            return
         }
-        world.execute { open(playerRef) }
-        return false
-    }
 
-    fun updateUIForViewers(dummyName: String) {
-        val newLog = DummyChatListener.getLogForUI(dummyName)
-        messages.clear()
-        messages.addAll(newLog.map { ChatLine(it.ansiMessage) })
+        world.execute { open(playerRef) }
     }
 
     private fun sendChat(playerRef: PlayerRef, input: String) {
         if (input.isBlank()) return
         when (input.first()) {
-            '.' -> playerRef.chat(input.removePrefix(".")) //TODO
+            '.' -> playerRef.chat(input.removePrefix("."))
             '/' -> HytaleServer.get().commandManager.handleCommand(playerRef, input.removePrefix("/"))
             else -> playerRef.chat(input)
         }
     }
 
     private fun PlayerRef.chat(text: String) {
-        val packet = ChatMessage(text)
-        val handler = this.packetHandler
-        handler.handle(packet)
+        this.packetHandler.handle(ChatMessage(text))
+    }
+    private fun PlayerRef.command(text: String){
+        this.packetHandler.handle(ChatMessage("/$text"))
+    }
+
+    // Call this when players leave to prevent memory leaks
+    fun cleanup(playerUuid: UUID) {
+        playerChatLogs.remove(playerUuid)
     }
 }

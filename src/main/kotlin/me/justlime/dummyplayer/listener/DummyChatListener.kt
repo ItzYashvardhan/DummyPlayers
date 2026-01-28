@@ -26,7 +26,7 @@ object DummyChatListener {
             history.add(message)
         }
 
-        UIManager.updateUIForViewers(targetPlayerName)
+//        UIManager.up
     }
 
     /**
