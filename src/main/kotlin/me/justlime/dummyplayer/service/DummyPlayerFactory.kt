@@ -33,7 +33,7 @@ import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import io.netty.channel.embedded.EmbeddedChannel
 import me.justlime.dummyplayer.packets.DummyPacketHandler
-import java.util.UUID
+import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
@@ -41,7 +41,7 @@ import java.util.concurrent.atomic.AtomicInteger
 object DummyPlayerFactory {
 
     private val cloneCounts = ConcurrentHashMap<String, AtomicInteger>()
-    private val dummies = ConcurrentHashMap<String, Ref<EntityStore>>()
+    private val dummies = ConcurrentHashMap<String, PlayerRef>()
 
     fun spawnDummy(
         world: World,
@@ -57,30 +57,30 @@ object DummyPlayerFactory {
             dummies.remove(username)
         }
 
-        val uuid = UUID.randomUUID()
+        val uuid = UUID.nameUUIDFromBytes("Dummy:$username".toByteArray(Charsets.UTF_8))
         val holder = EntityStore.REGISTRY.newHolder()
         val embeddedChannel = EmbeddedChannel()
         val protocolVersion = ProtocolVersion(ProtocolSettings.PROTOCOL_VERSION)
-        val authentication =  PlayerAuthentication(uuid, username)
+        val authentication = PlayerAuthentication(uuid, username)
         val dummyHandler = DummyPacketHandler(embeddedChannel, protocolVersion, authentication)
         val chunkTracker = ChunkTracker()
 
-        val playerRef = PlayerRef(holder, uuid, username, "en_US", dummyHandler, chunkTracker)
+        val dummyRef = PlayerRef(holder, uuid, username, "en_US", dummyHandler, chunkTracker)
 
-        setupHolderComponents(holder, playerRef, chunkTracker, uuid, skin, dummyHandler, username)
+        setupHolderComponents(holder, dummyRef, chunkTracker, uuid, skin, dummyHandler, username)
 
-        modifyUniversePlayersMap { it[uuid] = playerRef }
+        modifyUniversePlayersMap { it[uuid] = dummyRef }
 
         val spawnPos = Vector3d(position.x, position.y + 1.0, position.z)
         val initialTransform = TransformComponent(spawnPos, Vector3f(0f, 0f, 0f))
         holder.addComponent(TransformComponent.getComponentType(), initialTransform)
         val spawnTransform = Transform(spawnPos)
 
-        return world.addPlayer(playerRef, spawnTransform)?.thenApply { ref ->
+        return world.addPlayer(dummyRef, spawnTransform)?.thenApply { ref ->
             if (ref != null) {
                 val entityRef = ref.reference
                 if (entityRef != null) {
-                    dummies[username] = entityRef
+                    dummies[username] = ref
                     broadcastAddPlayer(world, uuid, username)
                     return@thenApply entityRef
                 }
@@ -92,14 +92,19 @@ object DummyPlayerFactory {
     fun deleteDummy(world: World, name: String): Boolean {
         val ref = dummies.remove(name)
         if (ref != null && ref.isValid) {
-            val playerRef = world.entityStore.store.getComponent(ref, PlayerRef.getComponentType())
+            val reference = ref.reference
+            if (reference == null) {
+                dummies.remove(name)
+               return false
+            }
+            val playerRef = world.entityStore.store.getComponent(reference, PlayerRef.getComponentType())
 
             if (playerRef != null) {
                 broadcastRemovePlayer(world, playerRef.uuid)
                 modifyUniversePlayersMap { it.remove(playerRef.uuid) }
                 playerRef.removeFromStore()
             } else {
-                world.entityStore.store.removeEntity(ref, RemoveReason.REMOVE)
+                world.entityStore.store.removeEntity(reference, RemoveReason.REMOVE)
             }
 
             return true
@@ -107,7 +112,7 @@ object DummyPlayerFactory {
         return false
     }
 
-    fun getDummy(name: String): Ref<EntityStore>? {
+    fun getDummy(name: String): PlayerRef? {
         return dummies[name]
     }
 
@@ -130,7 +135,9 @@ object DummyPlayerFactory {
         val count = cloneCounts.computeIfAbsent(originalName) { AtomicInteger(0) }.incrementAndGet()
         val newName = "${originalName}Clone$count"
 
-        val skin = requesterSkin ?: store.getComponent(originalPlayerRef, PlayerSkinComponent.getComponentType())?.playerSkin ?: createDefaultSkin()
+        val skin =
+            requesterSkin ?: store.getComponent(originalPlayerRef, PlayerSkinComponent.getComponentType())?.playerSkin
+            ?: createDefaultSkin()
 
         val originalTransform = store.getComponent(originalPlayerRef, TransformComponent.getComponentType())
         val originalPos = originalTransform?.position ?: Vector3d(0.0, 0.0, 0.0)
@@ -141,14 +148,14 @@ object DummyPlayerFactory {
 
     private fun setupHolderComponents(
         holder: Holder<EntityStore>,
-        playerRef: PlayerRef,
+        dummyRef: PlayerRef,
         chunkTracker: ChunkTracker,
         uuid: UUID,
         skin: PlayerSkin?,
         dummyHandler: DummyPacketHandler,
-        name: String
+        username: String
     ) {
-        holder.addComponent(PlayerRef.getComponentType(), playerRef)
+        holder.addComponent(PlayerRef.getComponentType(), dummyRef)
         holder.addComponent(ChunkTracker.getComponentType(), chunkTracker)
         holder.addComponent(UUIDComponent.getComponentType(), UUIDComponent(uuid))
         holder.addComponent(PositionDataComponent.getComponentType(), PositionDataComponent())
@@ -157,7 +164,7 @@ object DummyPlayerFactory {
 
         val player = Player()
         holder.addComponent(Player.getComponentType(), player)
-        player.init(uuid, playerRef)
+        player.init(uuid, dummyRef)
 
         val actualSkin = skin ?: createDefaultSkin()
         holder.addComponent(PlayerSkinComponent.getComponentType(), PlayerSkinComponent(actualSkin))
@@ -166,7 +173,7 @@ object DummyPlayerFactory {
             ModelComponent(CosmeticsModule.get().createModel(actualSkin))
         )
 
-        dummyHandler.setPlayerRef(playerRef, player)
+        dummyHandler.setPlayerRef(dummyRef, player)
 
         player.clientViewRadius = 2
         val entityViewer = EntityTrackerSystems.EntityViewer(2 * 32, dummyHandler)
@@ -175,18 +182,18 @@ object DummyPlayerFactory {
         holder.addComponent(PhysicsValues.getComponentType(), PhysicsValues())
         holder.addComponent(Velocity.getComponentType(), Velocity())
         holder.addComponent(DamageDataComponent.getComponentType(), DamageDataComponent())
-        
+
         // Additional components from com.hypixel.hytale.server.core.entity
         val knockbackComponent = KnockbackComponent()
         knockbackComponent.velocity = Vector3d(0.0, 0.0, 0.0)
         holder.addComponent(KnockbackComponent.getComponentType(), knockbackComponent)
-        holder.addComponent(Nameplate.getComponentType(), Nameplate(name))
+        holder.addComponent(Nameplate.getComponentType(), Nameplate(username))
 
         // Additional components from com.hypixel.hytale.server.core.modules.entity.component
         holder.addComponent(HeadRotation.getComponentType(), HeadRotation())
         holder.addComponent(Interactable.getComponentType(), Interactable.INSTANCE)
         holder.addComponent(AudioComponent.getComponentType(), AudioComponent())
-        holder.addComponent(DisplayNameComponent.getComponentType(), DisplayNameComponent(Message.raw(name)))
+        holder.addComponent(DisplayNameComponent.getComponentType(), DisplayNameComponent(Message.raw(username)))
         holder.addComponent(EntityScaleComponent.getComponentType(), EntityScaleComponent(1.0f))
         holder.addComponent(ActiveAnimationComponent.getComponentType(), ActiveAnimationComponent())
         holder.addComponent(CollisionResultComponent.getComponentType(), CollisionResultComponent())

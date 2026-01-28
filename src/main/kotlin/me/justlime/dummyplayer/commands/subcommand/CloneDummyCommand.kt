@@ -44,7 +44,7 @@ class CloneDummyCommand : AbstractPlayerCommand("clone", "Clone a dummy player")
 
         // If not found, check our tracked dummies
         if (targetRef == null) {
-            targetRef = _root_ide_package_.me.justlime.dummyplayer.service.DummyPlayerFactory.getDummy(targetName)
+//            targetRef = _root_ide_package_.me.justlime.dummyplayer.service.DummyPlayerFactory.getDummy(targetName)
         }
 
         if (targetRef != null) {

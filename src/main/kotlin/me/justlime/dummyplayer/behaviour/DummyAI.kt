@@ -25,7 +25,7 @@ object DummyAI {
             }
 
             behaviorList.forEach { behavior ->
-                behavior.tick(world, dummyRef, dummyName)
+//                behavior.tick(world, dummyRef, dummyName)
             }
         }
     }

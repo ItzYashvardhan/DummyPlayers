@@ -7,7 +7,7 @@ object DummySelectorService {
     private val sessions = ConcurrentHashMap<UUID, String>() //Player UUID and their selected Dummy Name
 
     fun selectDummy(playerViewerId: UUID, dummyName: String) {
-        sessions[playerViewerId] = dummyName.uppercase()
+        sessions[playerViewerId] = dummyName
     }
 
     fun deselectDummy(playerViewerId: UUID) {

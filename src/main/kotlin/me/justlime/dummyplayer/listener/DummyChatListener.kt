@@ -9,7 +9,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 object DummyChatListener {
-    private const val MESSAGE_LIMIT = 20
+    private const val MESSAGE_LIMIT = 18
 
     // Stores the last 20 messages for each dummy (Key: DummyName, Messages)
     private val chatHistory = ConcurrentHashMap<String, MutableList<Message>>()
