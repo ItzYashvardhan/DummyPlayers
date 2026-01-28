@@ -24,10 +24,9 @@ class DummyPacketHandler(
     override fun write(packet: Packet) {
         if (packet is ServerMessage) {
             val dummyName = this.auth?.username ?: return
-            val chatType = packet.type
             val formattedMessage = packet.message ?: return
             val message = Message(formattedMessage)
-            DummyChatListener.onPacketSend(dummyName, chatType, message)
+            DummyChatListener.onPacketSend(dummyName, message)
             return
         }
     }

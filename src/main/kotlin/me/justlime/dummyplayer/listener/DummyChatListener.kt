@@ -1,11 +1,10 @@
 package me.justlime.dummyplayer.listener
 
-import au.ellie.hyui.builders.LabelBuilder
-import com.hypixel.hytale.protocol.packets.interface_.ChatType
 import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.universe.Universe
 import me.justlime.dummyplayer.service.DummySelectorService
 import me.justlime.dummyplayer.ui.UIManager
+import org.jetbrains.annotations.ApiStatus
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
@@ -15,10 +14,8 @@ object DummyChatListener {
     // Stores the last 15 messages for each dummy (Key: DummyName, Messages)
     private val chatHistory = ConcurrentHashMap<String, MutableList<Message>>()
 
-    /**
-     * Call this method when your packet interceptor catches an OUTGOING ChatMessage
-     */
-    fun onPacketSend(targetPlayerName: String, chatType: ChatType, message: Message) {
+    @ApiStatus.Internal
+    fun onPacketSend(targetPlayerName: String, message: Message) {
         // Save to History
         val history = chatHistory.computeIfAbsent(targetPlayerName) {
             Collections.synchronizedList(ArrayList())
@@ -40,21 +37,25 @@ object DummyChatListener {
     }
 
     private fun updateUIForViewers(dummyName: String) {
-        val viewers = DummySelectorService.getPlayersWatchingDummy(dummyName)
-        for (viewer in viewers) {
-            val builder = UIManager.playersDummyUI[viewer] ?: return
-            builder.elements.forEach { elementBuilder ->
-                if (elementBuilder.id == "chat-messages") {
-                    val newLog = getLogForUI(dummyName)
-                    val containerBuilder = LabelBuilder.label().withText("${newLog.size} messages")
-                    Universe.get().getPlayer(viewer)?.let {ref ->
-                        newLog.forEach {
-                            ref.sendMessage(it)
-                        }
-                    }
-                    elementBuilder.addChild(containerBuilder)
+        val viewers = DummySelectorService.getPlayersWatchingDummy(dummyName.uppercase())
+        println("$viewers $dummyName")
+        for (viewerId in viewers) {
+            val uiPair = UIManager.playersDummyUI[viewerId] ?: continue
+            val page = uiPair.first
+            val template = uiPair.second
+            val newLog = getLogForUI(dummyName)
+            newLog.forEach {
+                val player = Universe.get().getPlayer(viewerId)
+                if (player == null) {
+                    println("PlayerNotFound")
+                    return@forEach
                 }
+                val rawText = it.ansiMessage
+                player.sendMessage(Message.raw("[$dummyName] $rawText"))
             }
+            // Update the template variable
+            template.setVariable("chat_messages", newLog.joinToString { "<p>${it.ansiMessage}</p>" })
+            page.updatePage(false)
         }
     }
 }

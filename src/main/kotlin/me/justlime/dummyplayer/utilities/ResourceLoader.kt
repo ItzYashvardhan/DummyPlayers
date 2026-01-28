@@ -5,9 +5,9 @@ import me.justlime.dummyplayer.DummyPlayerPlugin
 import java.io.File
 
 object ResourceLoader {
-    lateinit var menuContentHtml: String
+//    lateinit var menuContentHtml: String
     fun load(plugin: DummyPlayerPlugin){
-        menuContentHtml = loadAndSaveResource(plugin, "html/Menu.html", "Menu.html")
+//        menuContentHtml = loadAndSaveResource(plugin, "html/Menu.html", "Menu.html")
     }
 
 
