@@ -30,6 +30,8 @@ object UIManager {
         val template = TemplateProcessor().setVariable("messages", messages)
         val pageBuilder = PageBuilder.pageForPlayer(playerRef)
             .loadHtml("Pages/Menu.html", template)
+            .enableRuntimeTemplateUpdates(true)
+            .withLifetime(CustomPageLifetime.CanDismissOrCloseThroughInteraction)
 
 
         pageBuilder.elements.forEach { elementBuilder ->
@@ -46,7 +48,7 @@ object UIManager {
             }
             if (elementBuilder.id == "chat-input") {
                 val textField = elementBuilder as TextFieldBuilder
-                textField.addEventListener(CustomUIEventBindingType.FocusLost) { input, ctx ->
+                textField.addEventListener(CustomUIEventBindingType.Validating) { input, ctx ->
                     val selectedDummy = DummySelectorService.getSelectedDummy(playerRef.uuid)
                     if (selectedDummy == null) {
                         playerRef.sendMessage(Message.raw("You must select a dummy"))

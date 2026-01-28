@@ -25,7 +25,7 @@ repositories {
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation(files("libs/HytaleServer.jar"))
-    implementation(files("libs/HyUI-0.5.6-all.jar"))
+    implementation(files("libs/HyUI-0.5.7-all.jar"))
     implementation("org.jetbrains:annotations:24.1.0")
     compileOnly("com.google.code.gson:gson:2.10.1")
 }
