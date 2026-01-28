@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import me.justlime.dummyplayer.service.DummyPlayerFactory
+import me.justlime.dummyplayer.utilities.Utilities
 
 class CreateDummyCommand : AbstractPlayerCommand("create", "Create a dummy player") {
     var nameArgument: RequiredArg<String> = withRequiredArg("name", "Provide Player Name", ArgTypes.STRING)
@@ -33,14 +34,32 @@ class CreateDummyCommand : AbstractPlayerCommand("create", "Create a dummy playe
             return
         }
 
+        // 1. Get position from the executing player
         val transform = world.entityStore.store.getComponent(refStore, TransformComponent.getComponentType())
         val position = transform?.position ?: Vector3d(0.0, 0.0, 0.0)
 
-        // Get the skin of the player executing the command
-        val skinComponent = world.entityStore.store.getComponent(refStore, PlayerSkinComponent.getComponentType())
-        val skin = skinComponent?.playerSkin
+        // 2. Prepare the Fallback Skin (The executor's skin)
+        val mySkinComponent = world.entityStore.store.getComponent(refStore, PlayerSkinComponent.getComponentType())
+        val fallbackSkin = mySkinComponent?.playerSkin
 
-        DummyPlayerFactory.spawnDummy(world, name, position, skin)
-        context.sendMessage(Message.raw("Created dummy player: $name"))
+        context.sendMessage(Message.raw("Fetching skin for '$name'..."))
+
+        // 3. Run the async lookup
+        Utilities.getSkinByUsername(name).thenAccept { foundSkin ->
+            // 4. Decide which skin to use (Found vs Fallback)
+            val finalSkin = foundSkin ?: fallbackSkin
+
+            if (foundSkin == null) {
+                playerRef.sendMessage(Message.raw("Could not find skin for '$name'. Using yours as fallback."))
+            }
+
+            // 5. IMPORTANT: Jump back to the Main Thread to spawn the entity
+            // Spawning entities from an async thread will crash the server!
+            world.execute {
+                DummyPlayerFactory.spawnDummy(world, name, position, finalSkin)
+                playerRef.sendMessage(Message.raw("Created dummy player: $name"))
+            }
+        }
+
     }
 }
