@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent
 import com.hypixel.hytale.server.core.modules.entity.player.PlayerSkinComponent
+import com.hypixel.hytale.server.core.permissions.HytalePermissions
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
@@ -19,6 +20,10 @@ import me.justlime.dummyplayer.utilities.Utilities
 class CreateDummyCommand : AbstractPlayerCommand("create", "Create a dummy player") {
     var nameArgument: RequiredArg<String> = withRequiredArg("name", "Provide Player Name", ArgTypes.STRING)
     override fun canGeneratePermission(): Boolean = false
+
+    init {
+        requirePermission(HytalePermissions.fromCommand("dummy.create"))
+    }
 
     override fun execute(
         context: CommandContext,

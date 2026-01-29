@@ -7,12 +7,16 @@ import com.hypixel.hytale.server.core.command.system.CommandContext
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand
+import com.hypixel.hytale.server.core.permissions.HytalePermissions
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 
 class DeleteDummyCommand : AbstractPlayerCommand("delete", "Delete a dummy player") {
     var nameArgument: RequiredArg<String> = withRequiredArg("name", "Provide Player Name", ArgTypes.STRING)
+    init {
+        requirePermission(HytalePermissions.fromCommand("dummy.delete"))
+    }
     override fun canGeneratePermission(): Boolean = false
     override fun execute(
         context: CommandContext,
@@ -22,7 +26,7 @@ class DeleteDummyCommand : AbstractPlayerCommand("delete", "Delete a dummy playe
         world: World
     ) {
         val name = nameArgument.get(context)
-        if (_root_ide_package_.me.justlime.dummyplayer.service.DummyPlayerFactory.deleteDummy(world, name)) {
+        if (me.justlime.dummyplayer.service.DummyPlayerFactory.deleteDummy(world, name)) {
             context.sendMessage(Message.raw("Deleted dummy player: $name"))
         } else {
             context.sendMessage(Message.raw("Could not find dummy player: $name"))
