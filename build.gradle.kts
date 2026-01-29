@@ -11,7 +11,7 @@ plugins {
 }
 
 group = "me.justlime.dummyplayer"
-version = "1.1"
+version = "1.2"
 description = "Add Dummy Players to your hytale server!"
 
 // Root Path for Hytale
@@ -24,7 +24,7 @@ repositories {
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-    implementation(files("libs/HytaleServer.jar"))
+    compileOnly(files("libs/HytaleServer.jar"))
     implementation(files("libs/HyUI-0.5.7-all.jar"))
     implementation("org.jetbrains:annotations:24.1.0")
     compileOnly("com.google.code.gson:gson:2.10.1")
@@ -75,7 +75,8 @@ tasks {
         archiveClassifier.set("")
 
         // Relocate dependencies to avoid conflicts
-        relocate("com.google.gson", "me.codelime.dummyplayer.gson")
+        relocate("com.google.gson", "me.justlime.dummyplayer.libs.gson")
+        relocate("au.ellie.hyui", "me.justlime.dummyplayer.libs.hyui")
 
         // Minimize JAR size (removes unused classes)
         minimize()
