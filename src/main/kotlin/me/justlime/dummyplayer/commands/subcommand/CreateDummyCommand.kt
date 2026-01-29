@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.permissions.HytalePermissions
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
+import me.justlime.dummyplayer.enums.DummyValidationResult
 import me.justlime.dummyplayer.service.DummyPlayerFactory
 import me.justlime.dummyplayer.utilities.Utilities
 
@@ -34,10 +35,7 @@ class CreateDummyCommand : AbstractPlayerCommand("create", "Create a dummy playe
     ) {
         val name = nameArgument.get(context)
 
-        if (DummyPlayerFactory.getDummy(name) != null) {
-            context.sendMessage(Message.raw("A dummy with the name '$name' already exists!"))
-            return
-        }
+
 
         // Get position from the executing player
         val transform = world.entityStore.store.getComponent(refStore, TransformComponent.getComponentType())
@@ -57,8 +55,23 @@ class CreateDummyCommand : AbstractPlayerCommand("create", "Create a dummy playe
             }
 
             world.execute {
-                DummyPlayerFactory.spawnDummy(world, name, position, finalSkin)
-                playerRef.sendMessage(Message.raw("Created dummy player: $name"))
+                DummyPlayerFactory.spawnDummy(world, name, position, finalSkin).thenAccept { result ->
+                    when (result) {
+                        is DummyValidationResult.Success -> {
+                            playerRef.sendMessage(Message.raw("Created dummy: $name"))
+                        }
+                        is DummyValidationResult.AlreadyExists -> {
+                            playerRef.sendMessage(Message.raw("A dummy named '$name' already exists!"))
+                        }
+                        is DummyValidationResult.ConnectionDenied -> {
+                            playerRef.sendMessage(Message.raw("Spawn blocked: ${result.reason}"))
+                        }
+                        is DummyValidationResult.Failure -> {
+                            playerRef.sendMessage(Message.raw("Error creating dummy: ${result.message}"))
+                            result.exception?.printStackTrace()
+                        }
+                    }
+                }
             }
         }
 

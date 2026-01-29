@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalAr
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand
+import com.hypixel.hytale.server.core.permissions.HytalePermissions
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
@@ -20,6 +21,10 @@ class UpdateDummyCommand : AbstractPlayerCommand("update", "Update a dummy's ski
     private val skinSourceArg: OptionalArg<String> = withOptionalArg("skin", "Username to copy skin from", ArgTypes.STRING)
 
     override fun canGeneratePermission(): Boolean = false
+
+    init {
+        requirePermission(HytalePermissions.fromCommand("dummy.update"))
+    }
 
     override fun execute(
         context: CommandContext,

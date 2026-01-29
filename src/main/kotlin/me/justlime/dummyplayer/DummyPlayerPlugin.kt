@@ -22,7 +22,9 @@ class DummyPlayerPlugin(init: JavaPluginInit) : JavaPlugin(init) {
     override fun setup() {
         super.setup()
         CommandManager.registerCommands(this)
-        ListenerManager(this).register()
+        val listener = ListenerManager(this)
+        listener.register()
+//        listener.eventTest()
         DUMMY_COMPONENT_TYPE = this.entityStoreRegistry.registerComponent(DummyComponent::class.java, ::DummyComponent)
         this.entityStoreRegistry.registerSystem(DummySystem(DUMMY_COMPONENT_TYPE))
     }

@@ -67,7 +67,7 @@ object UIManager {
                         return@addEventListener
                     }
 
-                    sendChat(dummyRef, input){
+                    sendChat(dummyRef, input) {
                         reopen(playerRef)
                     }
                 }
@@ -128,23 +128,33 @@ object UIManager {
             return
         }
 
-        val future: CompletableFuture<Void> = when (input.first()) {
-            '/' -> {
-                HytaleServer.get().commandManager.handleCommand(playerRef, input.removePrefix("/"))
-            }
-            else -> {
-                playerRef.chat(input)
-                CompletableFuture.completedFuture(null)
-            }
+        if (!playerRef.isValid) {
+            playerRef.sendMessage(Message.raw("reference not found or invalid entity"))
+            return
         }
+        val store = playerRef.reference?.store
+        if (store == null) {
+            playerRef.sendMessage(Message.raw("store not found"))
+            return
+        }
+        val world = store.externalData.world
+        world.execute {
+            val future: CompletableFuture<Void> = when (input.first()) {
+                '/' -> {
+                    HytaleServer.get().commandManager.handleCommand(playerRef, input.removePrefix("/"))
+                }
 
-        // Attach your lambda to the future
-        future.whenComplete { _, exception ->
-            if (exception != null) {
-                println("Command failed for ${playerRef.username}: ${exception.message}")
+                else -> {
+                    playerRef.chat(input)
+                    CompletableFuture.completedFuture(null)
+                }
             }
-            // Run the callback (safely on the main thread if needed)
-            onFinished()
+            future.whenComplete { _, exception ->
+                if (exception != null) {
+                    println("Command failed for ${playerRef.username}: ${exception.message}")
+                }
+                onFinished()
+            }
         }
     }
 
@@ -152,8 +162,6 @@ object UIManager {
         this.packetHandler.handle(ChatMessage(text))
     }
 
-
-    // Call this when players leave to prevent memory leaks
     fun cleanup(playerUuid: UUID) {
         playerChatLogs.remove(playerUuid)
     }

@@ -52,7 +52,7 @@ class CloneDummyCommand : AbstractPlayerCommand("clone", "Clone a dummy player")
             val skinComponent = world.entityStore.store.getComponent(refStore, PlayerSkinComponent.getComponentType())
             val requesterSkin = skinComponent?.playerSkin
 
-            val newRef = _root_ide_package_.me.justlime.dummyplayer.service.DummyPlayerFactory.cloneDummy(world, targetRef, requesterSkin)
+//            val DummyPlayerFactory.cloneDummy(world, targetRef, requesterSkin)
             context.sendMessage(Message.raw("Cloned $targetName"))
         } else {
             context.sendMessage(Message.raw("Could not find player or dummy: $targetName"))

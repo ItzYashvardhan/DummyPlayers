@@ -1,8 +1,6 @@
 package me.justlime.dummyplayer.service
 
 import com.hypixel.hytale.component.Holder
-import com.hypixel.hytale.component.Ref
-import com.hypixel.hytale.component.RemoveReason
 import com.hypixel.hytale.math.vector.Transform
 import com.hypixel.hytale.math.vector.Vector3d
 import com.hypixel.hytale.math.vector.Vector3f
@@ -34,71 +32,89 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import io.netty.channel.embedded.EmbeddedChannel
 import me.justlime.dummyplayer.DummyPlayerPlugin
 import me.justlime.dummyplayer.ecs.DummyComponent
+import me.justlime.dummyplayer.enums.DummyValidationResult
 import me.justlime.dummyplayer.packets.DummyPacketHandler
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
 
 object DummyPlayerFactory {
 
-    private val cloneCounts = ConcurrentHashMap<String, AtomicInteger>()
+    //    private val cloneCounts = ConcurrentHashMap<String, AtomicInteger>()
     private val dummies = ConcurrentHashMap<UUID, PlayerRef>()
+
+    // ===========================================================================================
+    // SPAWNING
+    // ===========================================================================================
 
     fun spawnDummy(
         world: World,
         username: String,
         position: Vector3d,
         skin: PlayerSkin? = null
-    ): CompletableFuture<Ref<EntityStore>?> {
+    ): CompletableFuture<DummyValidationResult> {
         val uuid = getDummyUUID(username)
+
         val existingRef = dummies[uuid]
         if (existingRef != null) {
             if (existingRef.isValid) {
-                return CompletableFuture.completedFuture(null)
+                return CompletableFuture.completedFuture(DummyValidationResult.AlreadyExists(existingRef))
             }
             dummies.remove(uuid)
         }
 
+        // Core Network Objects
         val holder = EntityStore.REGISTRY.newHolder()
         val embeddedChannel = EmbeddedChannel()
         val protocolVersion = ProtocolVersion(ProtocolSettings.PROTOCOL_VERSION)
         val authentication = PlayerAuthentication(uuid, username)
         val dummyHandler = DummyPacketHandler(embeddedChannel, protocolVersion, authentication)
+        val event = DummyPlayerEvent.setupConnect(dummyHandler, username, uuid, authentication)
+        if (event != null && event.isCancelled) {
+            val reason = event.reason ?: "Connection rejected."
+            return CompletableFuture.completedFuture(DummyValidationResult.ConnectionDenied(reason))
+        }
+
+        // Setup Entity
         val chunkTracker = ChunkTracker()
-
         val dummyRef = PlayerRef(holder, uuid, username, "en_US", dummyHandler, chunkTracker)
-
         setupHolderComponents(holder, dummyRef, chunkTracker, uuid, skin, dummyHandler, username)
 
+        // Add to World
         modifyUniversePlayersMap { it[uuid] = dummyRef }
-
         val spawnPos = Vector3d(position.x, position.y + 1.0, position.z)
-        val initialTransform = TransformComponent(spawnPos, Vector3f(0f, 0f, 0f))
-        holder.addComponent(TransformComponent.getComponentType(), initialTransform)
         val spawnTransform = Transform(spawnPos)
 
-        Universe.get().addPlayer()
-
-        return world.addPlayer(dummyRef, spawnTransform)?.thenApply { ref ->
-            if (ref != null) {
-                val entityRef = ref.reference
-                if (entityRef != null) {
-                    dummies[uuid] = ref
-                    broadcastAddPlayer(world, uuid, username)
-                    return@thenApply entityRef
-                }
-            }
-            return@thenApply null
-        } ?: CompletableFuture.completedFuture(null)
+        // Initialize Transform component
+        holder.addComponent(TransformComponent.getComponentType(), TransformComponent(spawnPos, Vector3f(0f, 0f, 0f)))
+        val result: CompletableFuture<DummyValidationResult> =
+            world.addPlayer(dummyRef, spawnTransform)?.thenApply { ref ->
+                if (ref != null && ref.isValid) {
+                    dummies[uuid] = dummyRef
+                    tabListAddPlayer(world, uuid, username)
+                    DummyValidationResult.Success(dummyRef, dummyRef)
+                } else DummyValidationResult.Failure("Invalid dummy reference")
+            } ?: CompletableFuture.completedFuture(DummyValidationResult.Failure("Failed to add dummy to the world"))
+        DummyPlayerEvent.connect(holder, dummyRef, world)
+        return result
     }
 
+    // ===========================================================================================
+    // UPDATING (Visuals)
+    // ===========================================================================================
+
+    /**
+     * Updates the skin and model of an existing dummy.
+     * @return true if successful, false if dummy not found or invalid
+     */
     fun updateSkin(dummyRef: PlayerRef, newSkin: PlayerSkin): Boolean {
         val entity = dummyRef.reference ?: return false
         if (!entity.isValid) return false
         val store = entity.store
+
         val skinComponent = PlayerSkinComponent(newSkin)
         store.putComponent(entity, PlayerSkinComponent.getComponentType(), skinComponent)
+
         val newModel = CosmeticsModule.get().createModel(newSkin)
         if (newModel != null) {
             val modelComponent = ModelComponent(newModel)
@@ -107,73 +123,37 @@ object DummyPlayerFactory {
         return true
     }
 
-    fun deleteDummy(world: World, name: String): Boolean {
-        val uuid = getDummyUUID(name)
-        val ref = dummies.remove(uuid)
-        if (ref != null && ref.isValid) {
-            val reference = ref.reference
-            if (reference == null) {
-                dummies.remove(uuid)
-               return false
-            }
-            val playerRef = world.entityStore.store.getComponent(reference, PlayerRef.getComponentType())
+    // ===========================================================================================
+    // UTILITIES
+    // ===========================================================================================
 
-            if (playerRef != null) {
-                broadcastRemovePlayer(world, playerRef.uuid)
-                modifyUniversePlayersMap { it.remove(playerRef.uuid) }
-                playerRef.removeFromStore()
-            } else {
-                world.entityStore.store.removeEntity(reference, RemoveReason.REMOVE)
-            }
-
-            return true
+    fun deleteDummy(username: String): Boolean {
+        val uuid = getDummyUUID(username)
+        val dummyRef = dummies.remove(uuid) ?: return false
+        val entity = dummyRef.reference
+        if (entity != null && entity.isValid) {
+            val world = entity.store.externalData.world
+            tabListRemovePlayer(world, uuid)
         }
-        return false
+        try {
+            dummyRef.packetHandler.channel.close()
+        } catch (_: Exception) {
+            // Ignore if already closed
+        }
+        Universe.get().removePlayer(dummyRef)
+        return true
     }
 
-    fun getDummy(uuid: UUID): PlayerRef? {
-        return dummies[uuid]
-    }
-    fun getDummy(name: String): PlayerRef? {
-        return getDummy(getDummyUUID(name))
-    }
+    fun getDummy(name: String): PlayerRef? = dummies[getDummyUUID(name)]
 
-    fun getDummyNames(): List<String> {
-        return dummies.keys.toList().map { getDummyName(it) }
-    }
+    fun getDummy(uuid: UUID): PlayerRef? = dummies[uuid]
 
     fun getDummyUUID(username: String): UUID {
         return UUID.nameUUIDFromBytes("Dummy:$username".toByteArray(Charsets.UTF_8))
     }
 
-    fun getDummyName(uuid: UUID): String{
-        return dummies[uuid]?.username ?: "NOT_FOUND"
-    }
-
-    fun cloneDummy(
-        world: World,
-        originalPlayerRef: Ref<EntityStore>,
-        requesterSkin: PlayerSkin? = null
-    ): CompletableFuture<Ref<EntityStore>?> {
-        val store = world.entityStore.store
-
-        if (!originalPlayerRef.isValid) return CompletableFuture.completedFuture(null)
-
-        val originalPlayerComponent = store.getComponent(originalPlayerRef, PlayerRef.getComponentType())
-        val originalName = originalPlayerComponent?.username ?: "Unknown"
-
-        val count = cloneCounts.computeIfAbsent(originalName) { AtomicInteger(0) }.incrementAndGet()
-        val newName = "${originalName}Clone$count"
-
-        val skin =
-            requesterSkin ?: store.getComponent(originalPlayerRef, PlayerSkinComponent.getComponentType())?.playerSkin
-            ?: createDefaultSkin()
-
-        val originalTransform = store.getComponent(originalPlayerRef, TransformComponent.getComponentType())
-        val originalPos = originalTransform?.position ?: Vector3d(0.0, 0.0, 0.0)
-        val newPos = Vector3d(originalPos.x, originalPos.y + 1.0, originalPos.z)
-
-        return spawnDummy(world, newName, newPos, skin)
+    fun getDummyNames(): List<String> {
+        return dummies.values.map { it.username }
     }
 
     private fun setupHolderComponents(
@@ -185,17 +165,46 @@ object DummyPlayerFactory {
         dummyHandler: DummyPacketHandler,
         username: String
     ) {
+        // Core Identity
         holder.addComponent(PlayerRef.getComponentType(), dummyRef)
         holder.addComponent(ChunkTracker.getComponentType(), chunkTracker)
         holder.addComponent(UUIDComponent.getComponentType(), UUIDComponent(uuid))
+        holder.addComponent(Nameplate.getComponentType(), Nameplate(username))
+        holder.addComponent(DisplayNameComponent.getComponentType(), DisplayNameComponent(Message.raw(username)))
+
+        // Custom Component
+        holder.addComponent(DummyPlayerPlugin.DUMMY_COMPONENT_TYPE, DummyComponent(dummyRef.uuid))
+
+        // Physics & Position
         holder.addComponent(PositionDataComponent.getComponentType(), PositionDataComponent())
+        holder.addComponent(PhysicsValues.getComponentType(), PhysicsValues())
+        holder.addComponent(Velocity.getComponentType(), Velocity())
+        holder.addComponent(BoundingBox.getComponentType(), BoundingBox())
+        holder.addComponent(EntityScaleComponent.getComponentType(), EntityScaleComponent(1.0f))
+        holder.addComponent(CollisionResultComponent.getComponentType(), CollisionResultComponent())
+
+        // Movement & Animation
         holder.addComponent(MovementAudioComponent.getComponentType(), MovementAudioComponent())
         holder.addComponent(MovementStatesComponent.getComponentType(), createIdleMovementStates())
-        holder.addComponent(DummyPlayerPlugin.DUMMY_COMPONENT_TYPE, DummyComponent(dummyRef.uuid))
+        holder.addComponent(HeadRotation.getComponentType(), HeadRotation())
+        holder.addComponent(ActiveAnimationComponent.getComponentType(), ActiveAnimationComponent())
+
+        // Game Logic
         val player = Player()
         holder.addComponent(Player.getComponentType(), player)
         player.init(uuid, dummyRef)
+        player.clientViewRadius = 2
 
+        holder.addComponent(DamageDataComponent.getComponentType(), DamageDataComponent())
+        holder.addComponent(Interactable.getComponentType(), Interactable.INSTANCE)
+        holder.addComponent(AudioComponent.getComponentType(), AudioComponent())
+
+        // Knockback
+        val knockbackComponent = KnockbackComponent()
+        knockbackComponent.velocity = Vector3d(0.0, 0.0, 0.0)
+        holder.addComponent(KnockbackComponent.getComponentType(), knockbackComponent)
+
+        // Visuals (Skin & Model)
         val actualSkin = skin ?: createDefaultSkin()
         holder.addComponent(PlayerSkinComponent.getComponentType(), PlayerSkinComponent(actualSkin))
         holder.addComponent(
@@ -203,33 +212,15 @@ object DummyPlayerFactory {
             ModelComponent(CosmeticsModule.get().createModel(actualSkin))
         )
 
+        // Tracker
         dummyHandler.setPlayerRef(dummyRef, player)
-
-        player.clientViewRadius = 2
         val entityViewer = EntityTrackerSystems.EntityViewer(2 * 32, dummyHandler)
         holder.addComponent(EntityTrackerSystems.EntityViewer.getComponentType(), entityViewer)
-
-        holder.addComponent(PhysicsValues.getComponentType(), PhysicsValues())
-        holder.addComponent(Velocity.getComponentType(), Velocity())
-        holder.addComponent(DamageDataComponent.getComponentType(), DamageDataComponent())
-
-        // Additional components from com.hypixel.hytale.server.core.entity
-        val knockbackComponent = KnockbackComponent()
-        knockbackComponent.velocity = Vector3d(0.0, 0.0, 0.0)
-        holder.addComponent(KnockbackComponent.getComponentType(), knockbackComponent)
-        holder.addComponent(Nameplate.getComponentType(), Nameplate(username))
-
-        // Additional components from com.hypixel.hytale.server.core.modules.entity.component
-        holder.addComponent(HeadRotation.getComponentType(), HeadRotation())
-        holder.addComponent(Interactable.getComponentType(), Interactable.INSTANCE)
-        holder.addComponent(AudioComponent.getComponentType(), AudioComponent())
-        holder.addComponent(DisplayNameComponent.getComponentType(), DisplayNameComponent(Message.raw(username)))
-        holder.addComponent(EntityScaleComponent.getComponentType(), EntityScaleComponent(1.0f))
-        holder.addComponent(ActiveAnimationComponent.getComponentType(), ActiveAnimationComponent())
-        holder.addComponent(CollisionResultComponent.getComponentType(), CollisionResultComponent())
-        holder.addComponent(BoundingBox.getComponentType(), BoundingBox())
     }
 
+    /**
+     * Reflectively add dummy to Universe. players map.
+     */
     private fun modifyUniversePlayersMap(action: (MutableMap<UUID, PlayerRef>) -> Unit) {
         try {
             val universe = Universe.get()
@@ -243,34 +234,32 @@ object DummyPlayerFactory {
         }
     }
 
-    private fun broadcastAddPlayer(world: World, uuid: UUID, name: String) {
-        val listPlayer = ServerPlayerListPlayer(
-            uuid,
-            name,
-            world.worldConfig.uuid,
-            0
-        )
+    // Sends packet to update Tab List
+    private fun tabListAddPlayer(world: World, uuid: UUID, name: String) {
+        val listPlayer = ServerPlayerListPlayer(uuid, name, world.worldConfig.uuid, 0)
         val addPacket = AddToServerPlayerList(arrayOf(listPlayer))
         world.playerRefs.forEach { p ->
             p.packetHandler.writeNoCache(addPacket)
         }
     }
 
-    private fun broadcastRemovePlayer(world: World, uuid: UUID) {
+    private fun tabListRemovePlayer(world: World, uuid: UUID) {
         val removePacket = RemoveFromServerPlayerList(arrayOf(uuid))
         world.playerRefs.forEach { p ->
-            p.packetHandler.writeNoCache(removePacket)
+            if (p.packetHandler !is DummyPacketHandler) {
+                p.packetHandler.writeNoCache(removePacket)
+            }
         }
     }
 
     private fun createIdleMovementStates(): MovementStatesComponent {
         val movementStates = MovementStatesComponent()
         movementStates.movementStates.idle = true
-        movementStates.movementStates.walking = false
         return movementStates
     }
 
     private fun createDefaultSkin(): PlayerSkin {
+        // A safe default Steve/Alex look
         return PlayerSkin().apply {
             bodyCharacteristic = "human_male"
             underwear = "underwear_male"
