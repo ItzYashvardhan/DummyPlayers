@@ -78,6 +78,8 @@ object DummyPlayerFactory {
         holder.addComponent(TransformComponent.getComponentType(), initialTransform)
         val spawnTransform = Transform(spawnPos)
 
+        Universe.get().addPlayer()
+
         return world.addPlayer(dummyRef, spawnTransform)?.thenApply { ref ->
             if (ref != null) {
                 val entityRef = ref.reference
