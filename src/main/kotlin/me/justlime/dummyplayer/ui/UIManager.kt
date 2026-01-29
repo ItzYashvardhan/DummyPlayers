@@ -1,5 +1,6 @@
 package me.justlime.dummyplayer.ui
 
+import au.ellie.hyui.builders.ButtonBuilder
 import au.ellie.hyui.builders.DropdownBoxBuilder
 import au.ellie.hyui.builders.PageBuilder
 import au.ellie.hyui.builders.TextFieldBuilder
@@ -14,6 +15,7 @@ import me.justlime.dummyplayer.listener.DummyChatListener
 import me.justlime.dummyplayer.service.DummyPlayerFactory
 import me.justlime.dummyplayer.service.DummySelectorService
 import java.util.*
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 
 object UIManager {
@@ -65,8 +67,28 @@ object UIManager {
                         return@addEventListener
                     }
 
-                    sendChat(dummyRef, input)
-                    reopen(playerRef)
+                    sendChat(dummyRef, input){
+                        reopen(playerRef)
+                    }
+                }
+            }
+
+            // Pov Button
+            if (elementBuilder.id == "pov-btn") {
+                val button = elementBuilder as ButtonBuilder
+                button.addEventListener(CustomUIEventBindingType.Activating) { void, context ->
+                    val currentDummy = DummySelectorService.getSelectedDummy(playerUuid)
+                    if (currentDummy == null) {
+                        playerRef.sendMessage(Message.raw("You must select a dummy"))
+                        return@addEventListener
+                    }
+                    val dummyRef = DummyPlayerFactory.getDummy(currentDummy)
+                    if (dummyRef == null) {
+                        playerRef.sendMessage(Message.raw("Dummy Ref not found"))
+                        return@addEventListener
+                    }
+//                    DummyControllerService.toggleControlling(playerRef, dummyRef)
+                    context.page.get().close()
                 }
             }
         }
@@ -100,21 +122,36 @@ object UIManager {
         world.execute { open(playerRef) }
     }
 
-    private fun sendChat(playerRef: PlayerRef, input: String) {
-        if (input.isBlank()) return
-        when (input.first()) {
-            '.' -> playerRef.chat(input.removePrefix("."))
-            '/' -> HytaleServer.get().commandManager.handleCommand(playerRef, input.removePrefix("/"))
-            else -> playerRef.chat(input)
+    private fun sendChat(playerRef: PlayerRef, input: String, onFinished: () -> Unit = {}) {
+        if (input.isBlank()) {
+            onFinished()
+            return
+        }
+
+        val future: CompletableFuture<Void> = when (input.first()) {
+            '/' -> {
+                HytaleServer.get().commandManager.handleCommand(playerRef, input.removePrefix("/"))
+            }
+            else -> {
+                playerRef.chat(input)
+                CompletableFuture.completedFuture(null)
+            }
+        }
+
+        // Attach your lambda to the future
+        future.whenComplete { _, exception ->
+            if (exception != null) {
+                println("Command failed for ${playerRef.username}: ${exception.message}")
+            }
+            // Run the callback (safely on the main thread if needed)
+            onFinished()
         }
     }
 
     private fun PlayerRef.chat(text: String) {
         this.packetHandler.handle(ChatMessage(text))
     }
-    private fun PlayerRef.command(text: String){
-        this.packetHandler.handle(ChatMessage("/$text"))
-    }
+
 
     // Call this when players leave to prevent memory leaks
     fun cleanup(playerUuid: UUID) {

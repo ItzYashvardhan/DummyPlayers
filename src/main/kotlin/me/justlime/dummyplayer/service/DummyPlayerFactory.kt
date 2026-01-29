@@ -32,6 +32,8 @@ import com.hypixel.hytale.server.core.universe.Universe
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import io.netty.channel.embedded.EmbeddedChannel
+import me.justlime.dummyplayer.DummyPlayerPlugin
+import me.justlime.dummyplayer.ecs.DummyComponent
 import me.justlime.dummyplayer.packets.DummyPacketHandler
 import java.util.*
 import java.util.concurrent.CompletableFuture
@@ -41,7 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger
 object DummyPlayerFactory {
 
     private val cloneCounts = ConcurrentHashMap<String, AtomicInteger>()
-    private val dummies = ConcurrentHashMap<String, PlayerRef>()
+    private val dummies = ConcurrentHashMap<UUID, PlayerRef>()
 
     fun spawnDummy(
         world: World,
@@ -49,15 +51,15 @@ object DummyPlayerFactory {
         position: Vector3d,
         skin: PlayerSkin? = null
     ): CompletableFuture<Ref<EntityStore>?> {
-        val existingRef = dummies[username]
+        val uuid = getDummyUUID(username)
+        val existingRef = dummies[uuid]
         if (existingRef != null) {
             if (existingRef.isValid) {
                 return CompletableFuture.completedFuture(null)
             }
-            dummies.remove(username)
+            dummies.remove(uuid)
         }
 
-        val uuid = UUID.nameUUIDFromBytes("Dummy:$username".toByteArray(Charsets.UTF_8))
         val holder = EntityStore.REGISTRY.newHolder()
         val embeddedChannel = EmbeddedChannel()
         val protocolVersion = ProtocolVersion(ProtocolSettings.PROTOCOL_VERSION)
@@ -80,7 +82,7 @@ object DummyPlayerFactory {
             if (ref != null) {
                 val entityRef = ref.reference
                 if (entityRef != null) {
-                    dummies[username] = ref
+                    dummies[uuid] = ref
                     broadcastAddPlayer(world, uuid, username)
                     return@thenApply entityRef
                 }
@@ -89,12 +91,27 @@ object DummyPlayerFactory {
         } ?: CompletableFuture.completedFuture(null)
     }
 
+    fun updateSkin(dummyRef: PlayerRef, newSkin: PlayerSkin): Boolean {
+        val entity = dummyRef.reference ?: return false
+        if (!entity.isValid) return false
+        val store = entity.store
+        val skinComponent = PlayerSkinComponent(newSkin)
+        store.putComponent(entity, PlayerSkinComponent.getComponentType(), skinComponent)
+        val newModel = CosmeticsModule.get().createModel(newSkin)
+        if (newModel != null) {
+            val modelComponent = ModelComponent(newModel)
+            store.putComponent(entity, ModelComponent.getComponentType(), modelComponent)
+        }
+        return true
+    }
+
     fun deleteDummy(world: World, name: String): Boolean {
-        val ref = dummies.remove(name)
+        val uuid = getDummyUUID(name)
+        val ref = dummies.remove(uuid)
         if (ref != null && ref.isValid) {
             val reference = ref.reference
             if (reference == null) {
-                dummies.remove(name)
+                dummies.remove(uuid)
                return false
             }
             val playerRef = world.entityStore.store.getComponent(reference, PlayerRef.getComponentType())
@@ -112,12 +129,23 @@ object DummyPlayerFactory {
         return false
     }
 
+    fun getDummy(uuid: UUID): PlayerRef? {
+        return dummies[uuid]
+    }
     fun getDummy(name: String): PlayerRef? {
-        return dummies[name]
+        return getDummy(getDummyUUID(name))
     }
 
     fun getDummyNames(): List<String> {
-        return dummies.keys.toList()
+        return dummies.keys.toList().map { getDummyName(it) }
+    }
+
+    fun getDummyUUID(username: String): UUID {
+        return UUID.nameUUIDFromBytes("Dummy:$username".toByteArray(Charsets.UTF_8))
+    }
+
+    fun getDummyName(uuid: UUID): String{
+        return dummies[uuid]?.username ?: "NOT_FOUND"
     }
 
     fun cloneDummy(
@@ -161,7 +189,7 @@ object DummyPlayerFactory {
         holder.addComponent(PositionDataComponent.getComponentType(), PositionDataComponent())
         holder.addComponent(MovementAudioComponent.getComponentType(), MovementAudioComponent())
         holder.addComponent(MovementStatesComponent.getComponentType(), createIdleMovementStates())
-
+        holder.addComponent(DummyPlayerPlugin.DUMMY_COMPONENT_TYPE, DummyComponent(dummyRef.uuid))
         val player = Player()
         holder.addComponent(Player.getComponentType(), player)
         player.init(uuid, dummyRef)

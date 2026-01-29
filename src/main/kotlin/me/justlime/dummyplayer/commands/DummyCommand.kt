@@ -1,30 +1,24 @@
 package me.justlime.dummyplayer.commands
 
-import com.hypixel.hytale.protocol.GameMode
 import com.hypixel.hytale.server.core.Message
-import com.hypixel.hytale.server.core.auth.ServerAuthManager
 import com.hypixel.hytale.server.core.command.system.AbstractCommand
 import com.hypixel.hytale.server.core.command.system.CommandContext
+import com.hypixel.hytale.server.core.permissions.HytalePermissions
 import com.hypixel.hytale.server.core.universe.Universe
 import me.justlime.dummyplayer.commands.subcommand.CreateDummyCommand
 import me.justlime.dummyplayer.commands.subcommand.DeleteDummyCommand
+import me.justlime.dummyplayer.commands.subcommand.UpdateDummyCommand
 import me.justlime.dummyplayer.ui.UIManager
-import me.justlime.dummyplayer.utilities.Utilities
-import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
-import java.time.Duration
 import java.util.concurrent.CompletableFuture
 
 class DummyCommand : AbstractCommand("dummy", "Manage dummy players") {
 
     init {
-        this.setPermissionGroup(GameMode.Creative)
-
+        requirePermission(HytalePermissions.fromCommand("dummy"))
         // Add your subcommands here
         addSubCommand(CreateDummyCommand())
         addSubCommand(DeleteDummyCommand())
+        addSubCommand(UpdateDummyCommand())
     }
 
     override fun execute(context: CommandContext): CompletableFuture<Void?>? {
