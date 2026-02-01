@@ -12,7 +12,7 @@ import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.Universe
 import me.justlime.dummyplayer.listener.DummyChatListener
-import me.justlime.dummyplayer.service.DummyPlayerFactory
+import me.justlime.dummyplayer.service.DummyPlayerService
 import me.justlime.dummyplayer.service.DummySelectorService
 import java.util.*
 import java.util.concurrent.CompletableFuture
@@ -33,7 +33,7 @@ object UIManager {
             updatePlayerLogs(playerUuid, selectedDummy)
         }
 
-        val dummyNames = DummyPlayerFactory.getDummyNames()
+        val dummyNames = DummyPlayerService.getDummyNames()
         val template = TemplateProcessor().setVariable("messages", playerChatLogs[playerUuid] ?: emptyList<ChatLine>())
 
         val pageBuilder = PageBuilder.pageForPlayer(playerRef).loadHtml("Pages/Menu.html", template)
@@ -61,7 +61,7 @@ object UIManager {
                         return@addEventListener
                     }
 
-                    val dummyRef = DummyPlayerFactory.getDummy(currentDummy)
+                    val dummyRef = DummyPlayerService.getDummy(currentDummy)
                     if (dummyRef == null) {
                         playerRef.sendMessage(Message.raw("Dummy Ref not found"))
                         return@addEventListener
@@ -82,7 +82,7 @@ object UIManager {
                         playerRef.sendMessage(Message.raw("You must select a dummy"))
                         return@addEventListener
                     }
-                    val dummyRef = DummyPlayerFactory.getDummy(currentDummy)
+                    val dummyRef = DummyPlayerService.getDummy(currentDummy)
                     if (dummyRef == null) {
                         playerRef.sendMessage(Message.raw("Dummy Ref not found"))
                         return@addEventListener

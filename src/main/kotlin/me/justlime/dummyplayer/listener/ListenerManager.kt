@@ -6,9 +6,9 @@ import com.hypixel.hytale.server.core.io.adapter.PacketAdapters
 import com.hypixel.hytale.server.core.io.adapter.PacketFilter
 import com.hypixel.hytale.server.core.io.handlers.game.GamePacketHandler
 import me.justlime.dummyplayer.DummyPlayerPlugin
-import me.justlime.dummyplayer.packets.DummyPacketHandler
-import me.justlime.dummyplayer.pov.DummyControllerService
-import me.justlime.dummyplayer.pov.DummyInputQueue
+import me.justlime.dummyplayer.network.DummyPacketHandler
+import me.justlime.dummyplayer.service.DummyControllerService
+import me.justlime.dummyplayer.service.DummyInputQueue
 
 class ListenerManager(val plugin: DummyPlayerPlugin) {
 

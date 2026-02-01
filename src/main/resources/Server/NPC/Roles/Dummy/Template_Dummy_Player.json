@@ -1,0 +1,78 @@
+{
+  "Type": "Abstract",
+  "StartState": "Idle",
+  "Groups": [ "Dummy" ],
+  "Faction": "Neutral",
+  "Parameters": {
+    "Appearance": {
+      "Value": "Player",
+      "Description": "Model to be used"
+    },
+    "MaxSpeed": {
+      "Value": 7,
+      "Description": "Maximum walking speed"
+    },
+    "MaxHealth": {
+      "Value": 20,
+      "Description": "Max health for the NPC"
+    },
+    "NameTranslationKey": {
+      "Value": "server.npcRoles.Dummy_Player.name",
+      "Description": "Translation key for NPC name display"
+    }
+  },
+  "Appearance": { "Compute": "Appearance" },
+  "MaxHealth": { "Compute": "MaxHealth" },
+  "KnockbackScale": 1.0,
+  "MotionControllerList": [
+    {
+      "Type": "Walk",
+      "MaxWalkSpeed": { "Compute": "MaxSpeed" },
+      "Gravity": 10,
+      "RunThreshold": 0.3,
+      "MaxFallSpeed": 15,
+      "MaxRotationSpeed": 360,
+      "Acceleration": 10
+    }
+  ],
+  "_InteractionVars": {
+    "Health": {
+      "Interactions": [
+        {
+          "EndNodes": [
+            {
+              "Type": "Yield"
+            }
+          ],
+          "Parent": "NPC_Receive_Damage",
+          "Radius": 0.5,
+          "Height": 1.8,
+          "Offset": [ 0, 0, 0 ]
+        }
+      ]
+    }
+  },
+  "Instructions": [
+    {
+      "Instructions": [
+        {
+          "Sensor": {
+            "Type": "State",
+            "State": "Idle"
+          },
+          "Instructions": [
+            {
+              "Sensor": {
+                "Type": "Any"
+              },
+              "BodyMotion": {
+                "Type": "Nothing"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "NameTranslationKey": { "Compute": "NameTranslationKey" }
+}

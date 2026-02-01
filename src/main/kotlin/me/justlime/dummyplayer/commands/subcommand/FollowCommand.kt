@@ -7,15 +7,20 @@ import com.hypixel.hytale.server.core.command.system.CommandContext
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand
+import com.hypixel.hytale.server.core.permissions.HytalePermissions
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
-import me.justlime.dummyplayer.behaviour.DummyAI
+import me.justlime.dummyplayer.service.DummyPlayerService
 
-class FollowCommand : AbstractPlayerCommand("follow", "Make a dummy follow you") {
+class FollowCommand : AbstractPlayerCommand("follow", "Toggle dummy following you") {
     var dummyNameArg: RequiredArg<String> = withRequiredArg("dummy", "Dummy Name", ArgTypes.STRING)
     
     override fun canGeneratePermission(): Boolean = false
+
+    init {
+         requirePermission(HytalePermissions.fromCommand("dummy.follow"))
+    }
 
     override fun execute(
         context: CommandContext,
@@ -25,17 +30,12 @@ class FollowCommand : AbstractPlayerCommand("follow", "Make a dummy follow you")
         world: World
     ) {
         val dummyName = dummyNameArg.get(context)
-        val targetName = playerRef.username
         
-        if (me.justlime.dummyplayer.service.DummyPlayerFactory.getDummy(dummyName) != null) {
-            // Clear previous behaviors to avoid conflicts (optional)
-           DummyAI.clearBehaviors(dummyName)
-           DummyAI.addBehavior(dummyName,
-                _root_ide_package_.me.justlime.dummyplayer.ai.FollowBehavior(targetName)
-            )
-            context.sendMessage(Message.raw("$dummyName is now following you."))
-        } else {
+        if (DummyPlayerService.getDummy(dummyName) == null) {
             context.sendMessage(Message.raw("Dummy not found: $dummyName"))
+            return
         }
+
+        DummyPlayerService.setRole(dummyName,"Dummy_Player_Follow")
     }
 }

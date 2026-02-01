@@ -1,6 +1,6 @@
 package me.justlime.dummyplayer.service
 
-import java.util.UUID
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 object DummySelectorService {
@@ -25,6 +25,4 @@ object DummySelectorService {
     fun getSessions(): ConcurrentHashMap<UUID, String> {
         return sessions
     }
-
-
 }

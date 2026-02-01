@@ -5,14 +5,17 @@ import org.jetbrains.gradle.ext.runConfigurations
 import org.jetbrains.gradle.ext.settings
 
 plugins {
-    kotlin("jvm") version "2.3.0"
-    id("com.gradleup.shadow") version "9.3.1"
-    id("org.jetbrains.gradle.plugin.idea-ext") version "1.3"
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.shadow)
+    alias(libs.plugins.idea.ext)
 }
 
-group = "me.justlime.dummyplayer"
-version = "1.2"
-description = "Add Dummy Players to your hytale server!"
+// Read manifest.json for project details
+@Suppress("UNCHECKED_CAST")
+val manifest = JsonSlurper().parseText(file("src/main/resources/manifest.json").readText()) as Map<String, Any>
+group = manifest["Group"]!!
+version = manifest["Version"]!!
+description = manifest["Description"] as? String
 
 // Root Path for Hytale
 val hytaleServerRoot = "E:\\Hytale\\Server-EA\\2026.01.24-6e2d4fc36"
@@ -23,13 +26,15 @@ repositories {
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-    implementation(files("libs/HytaleServer.jar"))
-    compileOnly(files("libs/DummyPlayer-{version}.jar"))
-    implementation(files("libs/HyUI-0.5.7-all.jar"))
-    implementation("org.jetbrains:annotations:24.1.0")
-    compileOnly("com.google.code.gson:gson:2.10.1")
+    implementation(libs.kotlin.stdlib)
+    compileOnly(files("libs/HytaleServer.jar"))
+    implementation(files("libs/HyUI-0.5.10-all.jar"))
+    implementation(libs.annotations)
+    compileOnly(libs.gson)
 }
+
+// Allow compileOnly dependencies to be available at runtime (for the server run config)
+configurations.runtimeClasspath.get().extendsFrom(configurations.compileOnly.get())
 
 val targetJavaVersion = 25
 kotlin {
@@ -54,11 +59,12 @@ tasks.build {
 // Reads manifest.json, updates version/pack flags, and writes it into the build output
 tasks {
     processResources {
-        val includesPack = true // Set to false if you don't have assets
+        val includesPack = true
 
         filesMatching("manifest.json") {
             // Read current file content
             val fileContent = file.readText()
+            @Suppress("UNCHECKED_CAST")
             val json = JsonSlurper().parseText(fileContent) as MutableMap<String, Any>
 
             // Update fields
@@ -76,7 +82,6 @@ tasks {
         archiveClassifier.set("")
 
         // Relocate dependencies to avoid conflicts
-        relocate("com.google.gson", "me.justlime.dummyplayer.libs.gson")
         relocate("au.ellie.hyui", "me.justlime.dummyplayer.libs.hyui")
 
         // Minimize JAR size (removes unused classes)

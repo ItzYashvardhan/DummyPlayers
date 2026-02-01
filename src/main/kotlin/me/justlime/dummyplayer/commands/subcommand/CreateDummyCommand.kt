@@ -3,6 +3,7 @@ package me.justlime.dummyplayer.commands.subcommand
 import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.math.vector.Vector3d
+import com.hypixel.hytale.math.vector.Vector3f
 import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.command.system.CommandContext
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg
@@ -14,8 +15,8 @@ import com.hypixel.hytale.server.core.permissions.HytalePermissions
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
-import me.justlime.dummyplayer.enums.DummyValidationResult
-import me.justlime.dummyplayer.service.DummyPlayerFactory
+import me.justlime.dummyplayer.model.enums.DummyValidationResult
+import me.justlime.dummyplayer.service.DummyPlayerService
 import me.justlime.dummyplayer.utilities.Utilities
 
 class CreateDummyCommand : AbstractPlayerCommand("create", "Create a dummy player") {
@@ -35,15 +36,14 @@ class CreateDummyCommand : AbstractPlayerCommand("create", "Create a dummy playe
     ) {
         val name = nameArgument.get(context)
 
-
-
         // Get position from the executing player
         val transform = world.entityStore.store.getComponent(refStore, TransformComponent.getComponentType())
         val position = transform?.position ?: Vector3d(0.0, 0.0, 0.0)
+        val rotation = transform?.rotation ?: Vector3f(0.0f, 0.0f, 0.0f)
 
         // Prepare the Fallback Skin
         val mySkinComponent = world.entityStore.store.getComponent(refStore, PlayerSkinComponent.getComponentType())
-        val fallbackSkin = mySkinComponent?.playerSkin
+        val fallbackSkin = mySkinComponent?.playerSkin!!
 
         context.sendMessage(Message.raw("Fetching skin for '$name'..."))
 
@@ -55,7 +55,7 @@ class CreateDummyCommand : AbstractPlayerCommand("create", "Create a dummy playe
             }
 
             world.execute {
-                DummyPlayerFactory.spawnDummy(world, name, position, finalSkin).thenAccept { result ->
+                DummyPlayerService.spawnDummy(world, name, position,rotation, finalSkin).thenAccept { result ->
                     when (result) {
                         is DummyValidationResult.Success -> {
                             playerRef.sendMessage(Message.raw("Created dummy: $name"))

@@ -1,4 +1,4 @@
-package me.justlime.dummyplayer.service
+package me.justlime.dummyplayer.listener
 
 import com.hypixel.hytale.component.Holder
 import com.hypixel.hytale.server.core.HytaleServer
@@ -10,7 +10,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.Universe
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
-import me.justlime.dummyplayer.packets.DummyPacketHandler
+import me.justlime.dummyplayer.network.DummyPacketHandler
 import java.util.*
 
 object DummyPlayerEvent {

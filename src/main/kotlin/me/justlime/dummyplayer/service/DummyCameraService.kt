@@ -1,16 +1,13 @@
-package me.justlime.dummyplayer.pov.camera
+package me.justlime.dummyplayer.service
 
 import com.hypixel.hytale.protocol.AttachedToType
 import com.hypixel.hytale.protocol.CanMoveType
 import com.hypixel.hytale.protocol.ClientCameraView
-import com.hypixel.hytale.protocol.MovementStates
 import com.hypixel.hytale.protocol.ServerCameraSettings
 import com.hypixel.hytale.protocol.packets.camera.SetServerCamera
 import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.entity.entities.Player
 import com.hypixel.hytale.server.core.entity.entities.player.CameraManager
-import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent
-import com.hypixel.hytale.server.core.entity.movement.MovementStatesSystems
 import com.hypixel.hytale.server.core.universe.PlayerRef
 
 object DummyCameraService {

@@ -5,9 +5,7 @@ import com.hypixel.hytale.server.core.command.system.AbstractCommand
 import com.hypixel.hytale.server.core.command.system.CommandContext
 import com.hypixel.hytale.server.core.permissions.HytalePermissions
 import com.hypixel.hytale.server.core.universe.Universe
-import me.justlime.dummyplayer.commands.subcommand.CreateDummyCommand
-import me.justlime.dummyplayer.commands.subcommand.DeleteDummyCommand
-import me.justlime.dummyplayer.commands.subcommand.UpdateDummyCommand
+import me.justlime.dummyplayer.commands.subcommand.*
 import me.justlime.dummyplayer.ui.UIManager
 import java.util.concurrent.CompletableFuture
 
@@ -15,10 +13,11 @@ class DummyCommand : AbstractCommand("dummy", "Manage dummy players") {
 
     init {
         requirePermission(HytalePermissions.fromCommand("dummy"))
-        // Add your subcommands here
         addSubCommand(CreateDummyCommand())
         addSubCommand(DeleteDummyCommand())
         addSubCommand(UpdateDummyCommand())
+        addSubCommand(FollowCommand())
+        addSubCommand(CloneDummyCommand())
     }
 
     override fun execute(context: CommandContext): CompletableFuture<Void?>? {

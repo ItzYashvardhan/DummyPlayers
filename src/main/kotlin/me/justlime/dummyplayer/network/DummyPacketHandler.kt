@@ -1,4 +1,4 @@
-package me.justlime.dummyplayer.packets
+package me.justlime.dummyplayer.network
 
 import com.hypixel.hytale.protocol.Packet
 import com.hypixel.hytale.protocol.packets.interface_.ServerMessage

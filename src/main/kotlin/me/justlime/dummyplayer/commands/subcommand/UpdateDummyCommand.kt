@@ -12,7 +12,7 @@ import com.hypixel.hytale.server.core.permissions.HytalePermissions
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
-import me.justlime.dummyplayer.service.DummyPlayerFactory
+import me.justlime.dummyplayer.service.DummyPlayerService
 import me.justlime.dummyplayer.utilities.Utilities
 
 class UpdateDummyCommand : AbstractPlayerCommand("update", "Update a dummy's skin") {
@@ -36,7 +36,7 @@ class UpdateDummyCommand : AbstractPlayerCommand("update", "Update a dummy's ski
         val dummyName = dummyNameArg.get(context)
         val skinSource = skinSourceArg.get(context) ?: dummyName
 
-        val dummyRef = DummyPlayerFactory.getDummy(dummyName)
+        val dummyRef = DummyPlayerService.getDummy(dummyName)
         if (dummyRef == null) {
             context.sendMessage(Message.raw("A dummy named '$dummyName' does not exist!"))
             return
@@ -49,7 +49,7 @@ class UpdateDummyCommand : AbstractPlayerCommand("update", "Update a dummy's ski
                 return@thenAccept
             }
             world.execute {
-                if (DummyPlayerFactory.updateSkin(dummyRef, newSkin)) {
+                if (DummyPlayerService.updateSkin(dummyRef, newSkin)) {
                     playerRef.sendMessage(Message.raw("Updated '$dummyName' with $skinSource's skin."))
                 } else {
                     playerRef.sendMessage(Message.raw("Failed to update skin for: $dummyName"))

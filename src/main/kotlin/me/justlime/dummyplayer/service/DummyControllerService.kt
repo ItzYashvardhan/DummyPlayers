@@ -1,13 +1,13 @@
-package me.justlime.dummyplayer.pov
+package me.justlime.dummyplayer.service
 
 import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.universe.PlayerRef
-import me.justlime.dummyplayer.pov.camera.DummyCameraService
+import me.justlime.dummyplayer.service.DummyCameraService
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 object DummyControllerService {
-    // Key: Controller (Real Player), Value: Victim (Dummy)
+    // Key: Controller (Real Player), (Dummy)
     private val activeSessions = ConcurrentHashMap<UUID, UUID>()
 
     fun startControlling(controller: PlayerRef, dummy: PlayerRef) {
