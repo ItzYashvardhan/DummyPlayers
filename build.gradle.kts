@@ -23,12 +23,14 @@ val hytaleServerRoot = "E:\\Hytale\\Server-EA\\2026.01.24-6e2d4fc36"
 repositories {
     mavenLocal()
     mavenCentral()
+    maven("https://maven.hytale.com/release")
+    maven("https://www.cursemaven.com")
 }
 
 dependencies {
     implementation(libs.kotlin.stdlib)
-    compileOnly(files("libs/HytaleServer.jar"))
-    implementation(files("libs/HyUI-0.5.10-all.jar"))
+    compileOnly("com.hypixel.hytale:Server:2026.02.17-255364b8e")
+    implementation("curse.maven:hyui-1431415:7667069")
     implementation(libs.annotations)
     compileOnly(libs.gson)
 }
