@@ -1,9 +1,7 @@
 package me.justlime.dummyplayer.ui
 
-import au.ellie.hyui.builders.ButtonBuilder
 import au.ellie.hyui.builders.DropdownBoxBuilder
 import au.ellie.hyui.builders.PageBuilder
-import au.ellie.hyui.builders.TextFieldBuilder
 import au.ellie.hyui.html.TemplateProcessor
 import com.hypixel.hytale.protocol.packets.interface_.ChatMessage
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType
@@ -38,59 +36,70 @@ object UIManager {
 
         val pageBuilder = PageBuilder.pageForPlayer(playerRef).loadHtml("Pages/Menu.html", template)
 
+        // Populate dropdown entries via element builders
         pageBuilder.elements.forEach { elementBuilder ->
-            // Dummy Selector
             if (elementBuilder.id == "dummy-list") {
                 val dropDown = elementBuilder as DropdownBoxBuilder
                 dummyNames.forEach { dropDown.addEntry(it, it) }
-
-                dropDown.addEventListener(CustomUIEventBindingType.ValueChanged) { value, _ ->
-                    DummySelectorService.selectDummy(playerUuid, value)
-                    reopen(playerRef)
-                }
                 dropDown.withValue(selectedDummy ?: "NONE")
             }
+        }
 
-            // Chat Input
-            if (elementBuilder.id == "chat-input") {
-                val textField = elementBuilder as TextFieldBuilder
-                textField.addEventListener(CustomUIEventBindingType.Validating) { input, _ ->
-                    val currentDummy = DummySelectorService.getSelectedDummy(playerUuid)
-                    if (currentDummy == null) {
-                        playerRef.sendMessage(Message.raw("You must select a dummy"))
-                        return@addEventListener
-                    }
+        // Register event listeners at page level (required for HYUIML elements)
+        // Dummy Selector - ValueChanged
+        pageBuilder.addEventListener("dummy-list", CustomUIEventBindingType.ValueChanged) { data, ctx ->
+            val value = ctx.getValue("dummy-list", String::class.java).orElse(data?.toString())
+            if (value != null) {
+                DummySelectorService.selectDummy(playerUuid, value)
+                reopen(playerRef)
+            }
+        }
 
-                    val dummyRef = DummyPlayerService.getDummy(currentDummy)
-                    if (dummyRef == null) {
-                        playerRef.sendMessage(Message.raw("Dummy Ref not found"))
-                        return@addEventListener
-                    }
+        // Chat Input - Validating (fires on Enter/submit)
+        pageBuilder.addEventListener("chat-input", CustomUIEventBindingType.Validating) { data, ctx ->
+            val inputFromCtx = ctx.getValue("chat-input", String::class.java).orElse(null)
+            val inputFromData = data?.toString()
+            val input = inputFromCtx ?: inputFromData
 
-                    sendChat(dummyRef, input) {
-                        reopen(playerRef)
-                    }
-                }
+            if (input.isNullOrBlank()) {
+                return@addEventListener
             }
 
-            // Pov Button
-            if (elementBuilder.id == "pov-btn") {
-                val button = elementBuilder as ButtonBuilder
-                button.addEventListener(CustomUIEventBindingType.Activating) { void, context ->
-                    val currentDummy = DummySelectorService.getSelectedDummy(playerUuid)
-                    if (currentDummy == null) {
-                        playerRef.sendMessage(Message.raw("You must select a dummy"))
-                        return@addEventListener
-                    }
-                    val dummyRef = DummyPlayerService.getDummy(currentDummy)
-                    if (dummyRef == null) {
-                        playerRef.sendMessage(Message.raw("Dummy Ref not found"))
-                        return@addEventListener
-                    }
-//                    DummyControllerService.toggleControlling(playerRef, dummyRef)
-                    context.page.get().close()
-                }
+            val currentDummy = DummySelectorService.getSelectedDummy(playerUuid)
+            if (currentDummy == null) {
+                playerRef.sendMessage(Message.raw("You must select a dummy"))
+                return@addEventListener
             }
+
+            val dummyRef = DummyPlayerService.getDummy(currentDummy)
+            if (dummyRef == null) {
+                playerRef.sendMessage(Message.raw("Dummy Ref not found"))
+                return@addEventListener
+            }
+
+            sendChat(dummyRef, input) {
+                reopen(playerRef)
+            }
+        }
+
+        // Chat Input - also listen to ValueChanged as fallback
+        pageBuilder.addEventListener("chat-input", CustomUIEventBindingType.ValueChanged) { data, ctx ->
+        }
+
+        // Pov Button - Activating
+        pageBuilder.addEventListener("pov-btn", CustomUIEventBindingType.Activating) { _, ctx ->
+            val currentDummy = DummySelectorService.getSelectedDummy(playerUuid)
+            if (currentDummy == null) {
+                playerRef.sendMessage(Message.raw("You must select a dummy"))
+                return@addEventListener
+            }
+            val dummyRef = DummyPlayerService.getDummy(currentDummy)
+            if (dummyRef == null) {
+                playerRef.sendMessage(Message.raw("Dummy Ref not found"))
+                return@addEventListener
+            }
+//            DummyControllerService.toggleControlling(playerRef, dummyRef)
+            ctx.page.get().close()
         }
 
         playerRef.reference?.store?.let { pageBuilder.open(it) }
@@ -151,7 +160,8 @@ object UIManager {
             }
             future.whenComplete { _, exception ->
                 if (exception != null) {
-                    println("Command failed for ${playerRef.username}: ${exception.message}")
+                    exception.printStackTrace()
+                } else {
                 }
                 onFinished()
             }

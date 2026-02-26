@@ -33,6 +33,7 @@ class DummyPlayerPlugin(init: JavaPluginInit) : JavaPlugin(init) {
         val listener = ListenerManager(this)
         listener.register()
 //        listener.eventTest()
+//        entityStoreRegistry.registerSystem(DummyDeathSystem()) TODO
     }
 
     private fun registerComponent() {

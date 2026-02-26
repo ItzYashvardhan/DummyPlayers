@@ -17,9 +17,9 @@ group = manifest["Group"]!!
 version = manifest["Version"]!!
 description = manifest["Description"] as? String
 
+val user: String? = System.getProperty("user.name") ?: ""
 // Root Path for Hytale
-val hytaleServerRoot = "E:\\Hytale\\Server-EA\\2026.01.24-6e2d4fc36"
-
+val hytaleServerRoot = "C:/Users/$user/AppData/Roaming/Hytale/install/release/package/game/latest"
 repositories {
     mavenLocal()
     mavenCentral()
@@ -27,8 +27,8 @@ repositories {
 
 dependencies {
     implementation(libs.kotlin.stdlib)
-    compileOnly(files("libs/HytaleServer.jar"))
-    implementation(files("libs/HyUI-0.5.10-all.jar"))
+    implementation(files("libs/HyUI-0.9.0.jar"))
+    implementation(files("libs/HytaleServer.jar"))
     implementation(libs.annotations)
     compileOnly(libs.gson)
 }

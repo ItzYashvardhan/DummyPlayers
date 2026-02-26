@@ -4,6 +4,7 @@ import com.hypixel.hytale.component.Holder
 import com.hypixel.hytale.math.vector.Transform
 import com.hypixel.hytale.math.vector.Vector3d
 import com.hypixel.hytale.math.vector.Vector3f
+import com.hypixel.hytale.protocol.NetworkChannel
 import com.hypixel.hytale.protocol.PlayerSkin
 import com.hypixel.hytale.protocol.ProtocolSettings
 import com.hypixel.hytale.protocol.packets.interface_.AddToServerPlayerList
@@ -79,6 +80,9 @@ object DummyPlayerService {
         val protocolVersion = ProtocolVersion(ProtocolSettings.PROTOCOL_VERSION)
         val authentication = PlayerAuthentication(uuid, username)
         val dummyHandler = DummyPacketHandler(embeddedChannel, protocolVersion, authentication)
+        for (nc in NetworkChannel.VALUES) {
+            dummyHandler.setChannel(nc, embeddedChannel)
+        }
         val event = DummyPlayerEvent.setupConnect(dummyHandler, username, uuid, authentication)
         if (event != null && event.isCancelled) {
             val reason = event.reason ?: "Connection rejected."
@@ -172,6 +176,26 @@ object DummyPlayerService {
         val npc = store.getComponent(ref, NPCEntity.getComponentType()!!) ?: return
         val roleIndex = NPCPlugin.get().getIndex(roleName)
         RoleChangeSystem.requestRoleChange(ref, npc.role!!, roleIndex, true, store)
+    }
+
+    fun getHighestDummySuffixAndName(baseName: String): Pair<Int, String> {
+        val allNames = getDummyNames()
+        var maxSuffix = 0
+        var lastDummyName = baseName
+
+        for (existingName in allNames) {
+            if (existingName == baseName) {
+                if (maxSuffix == 0) maxSuffix = 1
+            } else if (existingName.startsWith("${baseName}_")) {
+                val suffixStr = existingName.substringAfter("${baseName}_")
+                val suffixInt = suffixStr.toIntOrNull()
+                if (suffixInt != null && suffixInt > maxSuffix) {
+                    maxSuffix = suffixInt
+                    lastDummyName = existingName
+                }
+            }
+        }
+        return Pair(maxSuffix, lastDummyName)
     }
 
     internal fun createNPCEntity(
