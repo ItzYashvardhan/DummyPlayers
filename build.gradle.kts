@@ -10,16 +10,21 @@ plugins {
     alias(libs.plugins.idea.ext)
 }
 
-// Read manifest.json for project details
 @Suppress("UNCHECKED_CAST")
 val manifest = JsonSlurper().parseText(file("src/main/resources/manifest.json").readText()) as Map<String, Any>
 group = manifest["Group"]!!
 version = manifest["Version"]!!
 description = manifest["Description"] as? String
 
-val user: String? = System.getProperty("user.name") ?: ""
-// Root Path for Hytale
+val user: String = System.getProperty("user.name") ?: ""
 val hytaleServerRoot = "C:/Users/$user/AppData/Roaming/Hytale/install/release/package/game/latest"
+
+val shadowBundle: Configuration? by configurations.creating {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+    extendsFrom(configurations.implementation.get())
+}
+
 repositories {
     mavenLocal()
     mavenCentral()
@@ -27,13 +32,12 @@ repositories {
 
 dependencies {
     implementation(libs.kotlin.stdlib)
+    compileOnly(files("$hytaleServerRoot/Server/HytaleServer.jar"))
     implementation(files("libs/HyUI-0.9.0.jar"))
-    implementation(files("libs/HytaleServer.jar"))
     implementation(libs.annotations)
     compileOnly(libs.gson)
 }
 
-// Allow compileOnly dependencies to be available at runtime (for the server run config)
 configurations.runtimeClasspath.get().extendsFrom(configurations.compileOnly.get())
 
 val targetJavaVersion = 25
@@ -46,7 +50,6 @@ java {
     withJavadocJar()
 }
 
-// Ported: Quiet Javadoc warnings
 tasks.javadoc {
     (options as StandardJavadocDocletOptions).addStringOption("Xdoclint:-missing", "-quiet")
 }
@@ -55,23 +58,23 @@ tasks.build {
     dependsOn("shadowJar")
 }
 
+val serverRunDir = file("$projectDir/run")
+if (!serverRunDir.exists()) {
+    serverRunDir.mkdirs()
+}
 
-// Reads manifest.json, updates version/pack flags, and writes it into the build output
 tasks {
     processResources {
         val includesPack = true
 
         filesMatching("manifest.json") {
-            // Read current file content
             val fileContent = file.readText()
             @Suppress("UNCHECKED_CAST")
             val json = JsonSlurper().parseText(fileContent) as MutableMap<String, Any>
 
-            // Update fields
             json["Version"] = version
             json["IncludesAssetPack"] = includesPack
 
-            // Return updated JSON string to Gradle to write to the JAR
             val updatedJson = JsonOutput.prettyPrint(JsonOutput.toJson(json))
             filter { updatedJson }
         }
@@ -80,23 +83,12 @@ tasks {
     shadowJar {
         archiveBaseName.set(rootProject.name)
         archiveClassifier.set("")
-
-        // Relocate dependencies to avoid conflicts
+        configurations = listOf(shadowBundle)
         relocate("au.ellie.hyui", "me.justlime.dummyplayer.libs.hyui")
-
-        // Minimize JAR size (removes unused classes)
         minimize()
     }
 }
 
-
-// Ensure run directory exists
-val serverRunDir = file("$projectDir/run")
-if (!serverRunDir.exists()) {
-    serverRunDir.mkdirs()
-}
-
-// Adds a "HytaleServer" run button to IntelliJ
 idea {
     project {
         settings {

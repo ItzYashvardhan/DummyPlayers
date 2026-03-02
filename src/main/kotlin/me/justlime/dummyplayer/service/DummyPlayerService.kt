@@ -65,7 +65,7 @@ object DummyPlayerService {
     ): CompletableFuture<DummyValidationResult> {
         val uuid = getDummyUUID(username)
 
-        val existingRef = dummies[uuid]
+        val existingRef = getDummy(uuid)
         if (existingRef != null) {
             if (existingRef.isValid) {
                 return CompletableFuture.completedFuture(DummyValidationResult.AlreadyExists(existingRef))

@@ -1,18 +1,14 @@
-package me.justlime.dummyplayer.commands.subcommand
+package me.justlime.dummyplayer.commands.subcommand.create
 
 import com.hypixel.hytale.component.Ref
-import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.math.vector.Vector3d
 import com.hypixel.hytale.math.vector.Vector3f
 import com.hypixel.hytale.server.core.Message
-import com.hypixel.hytale.server.core.command.system.CommandContext
-import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg
-import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg
-import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand
+import com.hypixel.hytale.server.core.command.system.arguments.types.Coord
+import com.hypixel.hytale.server.core.command.system.arguments.types.RelativeFloat
+import com.hypixel.hytale.server.core.command.system.exceptions.GeneralCommandException
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent
 import com.hypixel.hytale.server.core.modules.entity.player.PlayerSkinComponent
-import com.hypixel.hytale.server.core.permissions.HytalePermissions
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
@@ -22,57 +18,57 @@ import me.justlime.dummyplayer.utilities.Utilities
 import kotlin.math.ceil
 import kotlin.math.sqrt
 
-class CreateDummyCommand : AbstractPlayerCommand("create", "Create a dummy player") {
-    var nameArgument: RequiredArg<String> = withRequiredArg("name", "Provide Player Name", ArgTypes.STRING)
-    var amountArgument: OptionalArg<Int> = withOptionalArg("amount", "Amount of dummies to create", ArgTypes.INTEGER)
-    var stackArgument: OptionalArg<Boolean> = withOptionalArg("stack", "Spawn all on single position", ArgTypes.BOOLEAN)
-    var centerArgument: OptionalArg<Boolean> = withOptionalArg("center", "Center formation around player", ArgTypes.BOOLEAN)
-    var gapArgument: OptionalArg<Float> = withOptionalArg("gap", "Gap between dummies", ArgTypes.FLOAT)
-
-    override fun canGeneratePermission(): Boolean = false
-
-    init {
-        requirePermission(HytalePermissions.fromCommand("dummy.create"))
-    }
-
-    override fun execute(
-        context: CommandContext,
-        store: Store<EntityStore?>,
-        refStore: Ref<EntityStore?>,
+object DummySpawnLogic {
+    fun executeSpawn(
         playerRef: PlayerRef,
-        world: World
+        world: World,
+        refStore: Ref<EntityStore?>,
+        name: String,
+        amount: Int = 1,
+        stack: Boolean = false,
+        center: Boolean = false,
+        gap: Float = 2.0f,
+        xCoord: Coord? = null,
+        yCoord: Coord? = null,
+        zCoord: Coord? = null,
+        yawRot: RelativeFloat? = null,
+        pitchRot: RelativeFloat? = null,
+        rollRot: RelativeFloat? = null
     ) {
-        val name = nameArgument.get(context)
-        var amount = amountArgument.get(context) ?: 1
-        val stack = stackArgument.get(context) ?: false
-        val center = centerArgument.get(context) ?: false
-        val gap = gapArgument.get(context)?.toDouble() ?: 2.0
-
-        if (amount > 100) {
+        var safeAmount = amount
+        if (safeAmount > 100) {
             playerRef.sendMessage(Message.raw("Limiting spawn to 100 dummies for performance."))
-            amount = 100
+            safeAmount = 100
         }
 
-        val transform = world.entityStore.store.getComponent(refStore, TransformComponent.getComponentType())?.clone()
-        var position = transform?.position ?: Vector3d(0.0, 0.0, 0.0)
-        val rotation = transform?.rotation ?: Vector3f(0.0f, 0.0f, 0.0f)
+        val executorTransform = world.entityStore.store.getComponent(refStore, TransformComponent.getComponentType())?.clone()
+        val basePos = executorTransform?.position ?: Vector3d(0.0, 0.0, 0.0)
+        val baseRot = executorTransform?.rotation ?: Vector3f(0.0f, 0.0f, 0.0f)
 
-        val (maxSuffix, lastDummyName) = DummyPlayerService.getHighestDummySuffixAndName(name)
+        val finalX = xCoord?.resolveXZ(basePos.x) ?: basePos.x
+        val finalZ = zCoord?.resolveXZ(basePos.z) ?: basePos.z
 
-        if (maxSuffix > 0 || DummyPlayerService.getDummyNames().contains(name)) {
-            val lastDummyRef = DummyPlayerService.getDummy(lastDummyName)
-            val lastTransform = lastDummyRef?.reference?.let {
-                world.entityStore.store.getComponent(it, TransformComponent.getComponentType())
-            }
-            if (lastTransform != null) {
-                position = lastTransform.position
-            }
+        val finalY = try {
+            yCoord?.resolveYAtWorldCoords(basePos.y, world, finalX, finalZ) ?: basePos.y
+        } catch (e: GeneralCommandException) {
+            playerRef.sendMessage(Message.raw(e.message ?: "Failed to resolve Y coordinate. Chunk not loaded."))
+            return
         }
+
+        val position = Vector3d(finalX, finalY, finalZ)
+
+        val rotation = Vector3f(
+            pitchRot?.resolve(baseRot.x) ?: baseRot.x,
+            yawRot?.resolve(baseRot.y) ?: baseRot.y,
+            rollRot?.resolve(baseRot.z) ?: baseRot.z
+        )
+
+        val (maxSuffix, _) = DummyPlayerService.getHighestDummySuffixAndName(name)
 
         val mySkinComponent = world.entityStore.store.getComponent(refStore, PlayerSkinComponent.getComponentType())
         val fallbackSkin = mySkinComponent?.playerSkin!!
 
-        context.sendMessage(Message.raw("Fetching skin for '$name'..."))
+        playerRef.sendMessage(Message.raw("Fetching skin for '$name'..."))
 
         Utilities.getSkin(name).thenAccept { foundSkin ->
             val finalSkin = foundSkin ?: fallbackSkin
@@ -81,15 +77,15 @@ class CreateDummyCommand : AbstractPlayerCommand("create", "Create a dummy playe
                 playerRef.sendMessage(Message.raw("Could not find skin for '$name'. Using yours as fallback."))
             }
 
-            val columns = ceil(sqrt(amount.toDouble())).toInt()
-            val rows = ceil(amount.toDouble() / columns).toInt()
+            val columns = ceil(sqrt(safeAmount.toDouble())).toInt()
+            val rows = ceil(safeAmount.toDouble() / columns).toInt()
 
             val startX = if (center) position.x - ((columns - 1) * gap / 2.0) else position.x
             val startZ = if (center) position.z - ((rows - 1) * gap / 2.0) else position.z
 
-            for (i in 0 until amount) {
+            for (i in 0 until safeAmount) {
                 val currentSuffix = maxSuffix + i + 1
-                val dummyName = if (maxSuffix == 0 && amount == 1) name else "${name}_$currentSuffix"
+                val dummyName = if (maxSuffix == 0 && safeAmount == 1) name else "${name}_$currentSuffix"
 
                 val spawnPos = if (stack) {
                     position
@@ -106,7 +102,7 @@ class CreateDummyCommand : AbstractPlayerCommand("create", "Create a dummy playe
                                 playerRef.sendMessage(Message.raw("Created dummy: $dummyName"))
                             }
                             is DummyValidationResult.AlreadyExists -> {
-                                if (amount == 1) {
+                                if (safeAmount == 1) {
                                     playerRef.sendMessage(Message.raw("A dummy named '$dummyName' already exists!"))
                                 }
                             }

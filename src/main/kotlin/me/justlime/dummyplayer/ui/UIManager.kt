@@ -22,6 +22,8 @@ object UIManager {
     // Maps Player UUID -> List of ChatLines for their UI view
     private val playerChatLogs = ConcurrentHashMap<UUID, MutableList<ChatLine>>()
 
+    const val PATH = "Pages/Dummy/Menu.html"
+
     fun open(playerRef: PlayerRef) {
         val playerUuid = playerRef.uuid
         val selectedDummy = DummySelectorService.getSelectedDummy(playerUuid)
@@ -34,7 +36,7 @@ object UIManager {
         val dummyNames = DummyPlayerService.getDummyNames()
         val template = TemplateProcessor().setVariable("messages", playerChatLogs[playerUuid] ?: emptyList<ChatLine>())
 
-        val pageBuilder = PageBuilder.pageForPlayer(playerRef).loadHtml("Pages/Menu.html", template)
+        val pageBuilder = PageBuilder.pageForPlayer(playerRef).loadHtml(PATH, template)
 
         // Populate dropdown entries via element builders
         pageBuilder.elements.forEach { elementBuilder ->

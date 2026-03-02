@@ -6,7 +6,7 @@ import com.hypixel.hytale.server.core.command.system.CommandContext
 import com.hypixel.hytale.server.core.permissions.HytalePermissions
 import com.hypixel.hytale.server.core.universe.Universe
 import me.justlime.dummyplayer.commands.subcommand.ChatDummyCommand
-import me.justlime.dummyplayer.commands.subcommand.CreateDummyCommand
+import me.justlime.dummyplayer.commands.subcommand.create.CreateDummyCommand
 import me.justlime.dummyplayer.commands.subcommand.DeleteDummyCommand
 import me.justlime.dummyplayer.commands.subcommand.UpdateDummyCommand
 import me.justlime.dummyplayer.ui.UIManager
