@@ -9,6 +9,7 @@ import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes
 import com.hypixel.hytale.server.core.command.system.arguments.types.Coord
 import com.hypixel.hytale.server.core.command.system.arguments.types.RelativeFloat
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand
+import com.hypixel.hytale.server.core.permissions.HytalePermissions
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
@@ -22,7 +23,9 @@ class CreateDummyLocationVariant : AbstractPlayerCommand("Create dummy at locati
     private val pitchArg: OptionalArg<RelativeFloat> = withOptionalArg("pitch", "Pitch rotation", ArgTypes.RELATIVE_FLOAT)
     private val rollArg: OptionalArg<RelativeFloat> = withOptionalArg("roll", "Roll rotation", ArgTypes.RELATIVE_FLOAT)
 
-    override fun canGeneratePermission(): Boolean = false
+    init {
+        requirePermission(HytalePermissions.fromCommand("dummy.create"))
+    }
 
     override fun execute(context: CommandContext, store: Store<EntityStore?>, refStore: Ref<EntityStore?>, playerRef: PlayerRef, world: World) {
         DummySpawnLogic.executeSpawn(

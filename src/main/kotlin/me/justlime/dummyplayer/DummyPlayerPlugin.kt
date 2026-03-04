@@ -7,9 +7,11 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import me.justlime.dummyplayer.commands.CommandManager
 import me.justlime.dummyplayer.component.DummyPlayerComponent
 import me.justlime.dummyplayer.listener.ListenerManager
+import me.justlime.dummyplayer.service.DummyPlayerService
+import org.bstats.charts.SimplePie
+import org.bstats.hytale.Metrics
 
 class DummyPlayerPlugin(init: JavaPluginInit) : JavaPlugin(init) {
-
     companion object {
         private lateinit var instance: DummyPlayerPlugin
 
@@ -34,6 +36,15 @@ class DummyPlayerPlugin(init: JavaPluginInit) : JavaPlugin(init) {
         listener.register()
 //        listener.eventTest()
 //        entityStoreRegistry.registerSystem(DummyDeathSystem()) TODO
+        setupMetrics()
+    }
+
+    private fun setupMetrics() {
+        val pluginId = 29863
+        val metrics = Metrics(this, pluginId);
+        metrics.addCustomChart(SimplePie("dummy_count") {
+            DummyPlayerService.getDummyNames().size.toString()
+        })
     }
 
     private fun registerComponent() {

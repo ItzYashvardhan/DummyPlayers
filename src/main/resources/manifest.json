@@ -1,15 +1,16 @@
 {
   "Group": "JustLime",
   "Name": "DummyPlayers",
-  "Version": "1.3-SNAPSHOT",
+  "Version": "1.3",
   "Description": "Add Dummy Players to your hytale server!",
   "Authors": [
     {
-      "Name": "Yashvardhan"
+      "Name": "Yashvardhan",
+      "Url": "https://github.com/ItzYashvardhan/DummyPlayers"
     }
   ],
   "Website": "https://discord.gg/rVsUJ4keZN",
-  "ServerVersion": "*",
+  "ServerVersion": "2026.02.19-1a311a592",
   "Dependencies": {
     "Hytale:DamageModule": "*"
   },
@@ -17,6 +18,6 @@
 
   },
   "DisabledByDefault": false,
-  "Main": "me.justlime.dummyplayer.DummyPlayerPlugin",
-  "IncludesAssetPack": true
+  "IncludesAssetPack": true,
+  "Main": "me.justlime.dummyplayer.DummyPlayerPlugin"
 }

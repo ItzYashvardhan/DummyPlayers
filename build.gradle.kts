@@ -36,6 +36,7 @@ dependencies {
     implementation(files("libs/HyUI-0.9.0.jar"))
     implementation(libs.annotations)
     compileOnly(libs.gson)
+    implementation("org.bstats:bstats-hytale:3.2.1")
 }
 
 configurations.runtimeClasspath.get().extendsFrom(configurations.compileOnly.get())
@@ -84,7 +85,11 @@ tasks {
         archiveBaseName.set(rootProject.name)
         archiveClassifier.set("")
         configurations = listOf(shadowBundle)
+        dependencies {
+            exclude { it.moduleGroup != "org.bstats" }
+        }
         relocate("au.ellie.hyui", "me.justlime.dummyplayer.libs.hyui")
+        relocate("org.bstats", "me.justlime.dummyplayer.libs.bstats")
         minimize()
     }
 }
@@ -96,7 +101,7 @@ idea {
                 register<Application>("HytaleServer") {
                     mainClass = "com.hypixel.hytale.Main"
                     moduleName = "${project.name}.main"
-
+                    jvmArgs = "-Dbstats.relocatecheck=false"
                     val args = mutableListOf(
                         "--allow-op",
                         "--assets=$hytaleServerRoot\\Assets.zip"
