@@ -36,7 +36,7 @@ dependencies {
     implementation(files("libs/HyUI-0.9.0.jar"))
     implementation(libs.annotations)
     compileOnly(libs.gson)
-    implementation("org.bstats:bstats-hytale:3.2.1")
+    implementation(libs.bstats)
 }
 
 configurations.runtimeClasspath.get().extendsFrom(configurations.compileOnly.get())
@@ -68,16 +68,19 @@ tasks {
     processResources {
         val includesPack = true
 
-        filesMatching("manifest.json") {
-            val fileContent = file.readText()
-            @Suppress("UNCHECKED_CAST")
-            val json = JsonSlurper().parseText(fileContent) as MutableMap<String, Any>
+        doLast {
+            val manifestFile = file("${layout.buildDirectory.get()}/resources/main/manifest.json")
+            if (manifestFile.exists()) {
+                val fileContent = manifestFile.readText()
 
-            json["Version"] = version
-            json["IncludesAssetPack"] = includesPack
+                @Suppress("UNCHECKED_CAST")
+                val json = JsonSlurper().parseText(fileContent) as MutableMap<String, Any>
 
-            val updatedJson = JsonOutput.prettyPrint(JsonOutput.toJson(json))
-            filter { updatedJson }
+                json["Version"] = version
+                json["IncludesAssetPack"] = includesPack
+
+                manifestFile.writeText(JsonOutput.prettyPrint(JsonOutput.toJson(json)))
+            }
         }
     }
 
@@ -101,10 +104,10 @@ idea {
                 register<Application>("HytaleServer") {
                     mainClass = "com.hypixel.hytale.Main"
                     moduleName = "${project.name}.main"
-                    jvmArgs = "-Dbstats.relocatecheck=false"
+                    jvmArgs = "-Dbstats.relocatecheck=false "
                     val args = mutableListOf(
                         "--allow-op",
-                        "--assets=$hytaleServerRoot\\Assets.zip"
+                        "--assets=$hytaleServerRoot\\Assets.zip",
                     )
 
                     val modPath = sourceSets.main.get().java.srcDirs.first().parentFile.absolutePath

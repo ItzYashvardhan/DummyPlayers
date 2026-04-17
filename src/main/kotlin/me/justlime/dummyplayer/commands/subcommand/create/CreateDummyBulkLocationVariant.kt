@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 
 class CreateDummyBulkLocationVariant : AbstractPlayerCommand("Create multiple dummies at location") {
     private val nameArgument: RequiredArg<String> = withRequiredArg("name", "Provide Player Name", ArgTypes.STRING)
+    private val pingArg: OptionalArg<Float> = withOptionalArg("ping", "Simulated ping in ms", ArgTypes.FLOAT)
     private val amountArgument: RequiredArg<Int> = withRequiredArg("amount", "Amount of dummies to create", ArgTypes.INTEGER)
     private val xArg: RequiredArg<Coord> = withRequiredArg("x", "X coordinate", ArgTypes.RELATIVE_DOUBLE_COORD)
     private val yArg: RequiredArg<Coord> = withRequiredArg("y", "Y coordinate", ArgTypes.RELATIVE_DOUBLE_COORD)
@@ -37,6 +38,7 @@ class CreateDummyBulkLocationVariant : AbstractPlayerCommand("Create multiple du
             world = world,
             refStore = refStore,
             name = nameArgument.get(context),
+            ping = (pingArg.get(context) ?: 0).toLong(),
             amount = amountArgument.get(context),
             xCoord = xArg.get(context),
             yCoord = yArg.get(context),

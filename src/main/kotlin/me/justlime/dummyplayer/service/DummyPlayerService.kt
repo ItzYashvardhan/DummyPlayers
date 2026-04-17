@@ -6,10 +6,13 @@ import com.hypixel.hytale.math.vector.Vector3d
 import com.hypixel.hytale.math.vector.Vector3f
 import com.hypixel.hytale.protocol.NetworkChannel
 import com.hypixel.hytale.protocol.PlayerSkin
+import com.hypixel.hytale.protocol.Position
 import com.hypixel.hytale.protocol.ProtocolSettings
 import com.hypixel.hytale.protocol.packets.interface_.AddToServerPlayerList
 import com.hypixel.hytale.protocol.packets.interface_.RemoveFromServerPlayerList
 import com.hypixel.hytale.protocol.packets.interface_.ServerPlayerListPlayer
+import com.hypixel.hytale.protocol.packets.stream.StreamType
+import com.hypixel.hytale.protocol.packets.voice.RelayedVoiceData
 import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.auth.PlayerAuthentication
 import com.hypixel.hytale.server.core.cosmetics.CosmeticsModule
@@ -55,10 +58,10 @@ object DummyPlayerService {
     // ===========================================================================================
     // SPAWNING
     // ===========================================================================================
-
     fun spawnDummy(
         world: World,
         username: String,
+        ping: Long,
         position: Vector3d,
         rotation: Vector3f,
         skin: PlayerSkin
@@ -79,13 +82,13 @@ object DummyPlayerService {
         val embeddedChannel = EmbeddedChannel()
         val protocolVersion = ProtocolVersion(ProtocolSettings.PROTOCOL_VERSION)
         val authentication = PlayerAuthentication(uuid, username)
-        val dummyHandler = DummyPacketHandler(embeddedChannel, protocolVersion, authentication)
+        val dummyHandler = DummyPacketHandler(embeddedChannel, protocolVersion, authentication,ping)
         for (nc in NetworkChannel.VALUES) {
             dummyHandler.setChannel(nc, embeddedChannel)
         }
         val event = DummyPlayerEvent.setupConnect(dummyHandler, username, uuid, authentication)
         if (event != null && event.isCancelled) {
-            val reason = event.reason ?: "Connection rejected."
+            val reason = event.reason.rawText ?: "Connection rejected."
             return CompletableFuture.completedFuture(DummyValidationResult.ConnectionDenied(reason))
         }
 
@@ -139,7 +142,6 @@ object DummyPlayerService {
     // ===========================================================================================
     // UTILITIES
     // ===========================================================================================
-
     fun deleteDummy(username: String): Boolean {
         val uuid = getDummyUUID(username)
         val dummyRef = dummies.remove(uuid) ?: return false
@@ -330,4 +332,41 @@ object DummyPlayerService {
         }
     }
 
+    // ===========================================================================================
+    // VOICE
+    // ===========================================================================================
+
+    fun sendAudioChunkToPlayer(
+        dummyName: String,
+        listener: PlayerRef,
+        opusChunk: ByteArray,
+        sequenceId: Short
+    ) {
+        val dummyRef = getDummy(dummyName) ?: return
+        val entity = dummyRef.reference ?: return
+
+        if (!entity.isValid) return
+        val transform = entity.store.getComponent(entity, TransformComponent.getComponentType()) ?: return
+
+        val voiceChannel = listener.packetHandler.getChannel(StreamType.Voice)
+        if (voiceChannel == null || !voiceChannel.isActive) return
+
+        val packet = RelayedVoiceData().apply {
+            speakerId = dummyRef.uuid
+            entityId = entity.index
+            sequenceNumber = sequenceId
+            timestamp = System.currentTimeMillis().toInt()
+
+            speakerPosition = Position(
+                transform.position.x,
+                transform.position.y,
+                transform.position.z
+            )
+
+            speakerIsUnderwater = false
+            opusData = opusChunk
+        }
+
+        voiceChannel.writeAndFlush(packet)
+    }
 }

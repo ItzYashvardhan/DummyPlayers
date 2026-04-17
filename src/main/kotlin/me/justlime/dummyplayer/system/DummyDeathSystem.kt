@@ -35,7 +35,7 @@ class DummyDeathSystem : DeathSystems.OnDeathSystem() {
         commandBuffer.addComponent<DeferredCorpseRemoval?>(
             ref,
             this.deferredCorpseRemovalComponentType,
-            DeferredCorpseRemoval(1.0)
+            DeferredCorpseRemoval(1.0,null)
         )
 
         if (isDead) {

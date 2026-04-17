@@ -111,9 +111,7 @@ class ListenerManager(val plugin: DummyPlayerPlugin) {
 
     fun register() {
 
-
         PacketAdapters.registerInbound(PacketFilter { handler, packet ->
-
             if (handler !is GamePacketHandler) return@PacketFilter false
             if (packet !is ClientMovement) return@PacketFilter false
 

@@ -24,6 +24,7 @@ object DummySpawnLogic {
         world: World,
         refStore: Ref<EntityStore?>,
         name: String,
+        ping: Long,
         amount: Int = 1,
         stack: Boolean = false,
         center: Boolean = false,
@@ -41,7 +42,8 @@ object DummySpawnLogic {
             safeAmount = 100
         }
 
-        val executorTransform = world.entityStore.store.getComponent(refStore, TransformComponent.getComponentType())?.clone()
+        val executorTransform =
+            world.entityStore.store.getComponent(refStore, TransformComponent.getComponentType())?.clone()
         val basePos = executorTransform?.position ?: Vector3d(0.0, 0.0, 0.0)
         val baseRot = executorTransform?.rotation ?: Vector3f(0.0f, 0.0f, 0.0f)
 
@@ -96,25 +98,29 @@ object DummySpawnLogic {
                 }
 
                 world.execute {
-                    DummyPlayerService.spawnDummy(world, dummyName, spawnPos, rotation, finalSkin).thenAccept { result ->
-                        when (result) {
-                            is DummyValidationResult.Success -> {
-                                playerRef.sendMessage(Message.raw("Created dummy: $dummyName"))
-                            }
-                            is DummyValidationResult.AlreadyExists -> {
-                                if (safeAmount == 1) {
-                                    playerRef.sendMessage(Message.raw("A dummy named '$dummyName' already exists!"))
+                    DummyPlayerService.spawnDummy(world, dummyName, ping, spawnPos, rotation, finalSkin)
+                        .thenAccept { result ->
+                            when (result) {
+                                is DummyValidationResult.Success -> {
+                                    playerRef.sendMessage(Message.raw("Created dummy: $dummyName"))
+                                }
+
+                                is DummyValidationResult.AlreadyExists -> {
+                                    if (safeAmount == 1) {
+                                        playerRef.sendMessage(Message.raw("A dummy named '$dummyName' already exists!"))
+                                    }
+                                }
+
+                                is DummyValidationResult.ConnectionDenied -> {
+                                    playerRef.sendMessage(Message.raw("Spawn blocked: ${result.reason}"))
+                                }
+
+                                is DummyValidationResult.Failure -> {
+                                    playerRef.sendMessage(Message.raw("Error creating dummy: ${result.message}"))
+                                    result.exception?.printStackTrace()
                                 }
                             }
-                            is DummyValidationResult.ConnectionDenied -> {
-                                playerRef.sendMessage(Message.raw("Spawn blocked: ${result.reason}"))
-                            }
-                            is DummyValidationResult.Failure -> {
-                                playerRef.sendMessage(Message.raw("Error creating dummy: ${result.message}"))
-                                result.exception?.printStackTrace()
-                            }
                         }
-                    }
                 }
             }
         }

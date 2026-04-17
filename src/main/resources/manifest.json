@@ -1,7 +1,7 @@
 {
   "Group": "JustLime",
   "Name": "DummyPlayers",
-  "Version": "1.3",
+  "Version": "1.4",
   "Description": "Add Dummy Players to your hytale server!",
   "Authors": [
     {
@@ -10,7 +10,7 @@
     }
   ],
   "Website": "https://discord.gg/rVsUJ4keZN",
-  "ServerVersion": "2026.02.19-1a311a592",
+  "ServerVersion": "2026.03.23-338988e70",
   "Dependencies": {
     "Hytale:DamageModule": "*"
   },

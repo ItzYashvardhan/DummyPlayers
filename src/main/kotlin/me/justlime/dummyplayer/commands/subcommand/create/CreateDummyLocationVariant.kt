@@ -16,6 +16,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 
 class CreateDummyLocationVariant : AbstractPlayerCommand("Create dummy at location") {
     private val nameArgument: RequiredArg<String> = withRequiredArg("name", "Provide Player Name", ArgTypes.STRING)
+    private val pingArg: OptionalArg<Float> = withOptionalArg("ping", "Simulated ping in ms", ArgTypes.FLOAT)
+
     private val xArg: RequiredArg<Coord> = withRequiredArg("x", "X coordinate", ArgTypes.RELATIVE_DOUBLE_COORD)
     private val yArg: RequiredArg<Coord> = withRequiredArg("y", "Y coordinate", ArgTypes.RELATIVE_DOUBLE_COORD)
     private val zArg: RequiredArg<Coord> = withRequiredArg("z", "Z coordinate", ArgTypes.RELATIVE_DOUBLE_COORD)
@@ -33,6 +35,7 @@ class CreateDummyLocationVariant : AbstractPlayerCommand("Create dummy at locati
             world = world,
             refStore = refStore,
             name = nameArgument.get(context),
+            ping = (pingArg.get(context) ?: 0).toLong(),
             xCoord = xArg.get(context),
             yCoord = yArg.get(context),
             zCoord = zArg.get(context),

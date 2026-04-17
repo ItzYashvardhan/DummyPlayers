@@ -14,6 +14,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 
 class CreateDummyBulkVariant : AbstractPlayerCommand( "Create multiple dummies") {
     private val nameArgument: RequiredArg<String> = withRequiredArg("name", "Provide Player Name", ArgTypes.STRING)
+    private val pingArg: OptionalArg<Float> = withOptionalArg("ping", "Simulated ping in ms", ArgTypes.FLOAT)
+
     private val amountArgument: RequiredArg<Int> = withRequiredArg("amount", "Amount of dummies to create", ArgTypes.INTEGER)
     private val stackArgument: OptionalArg<Boolean> = withOptionalArg("stack", "Spawn all on single position", ArgTypes.BOOLEAN)
     private val centerArgument: OptionalArg<Boolean> = withOptionalArg("center", "Center formation around player", ArgTypes.BOOLEAN)
@@ -29,6 +31,7 @@ class CreateDummyBulkVariant : AbstractPlayerCommand( "Create multiple dummies")
             world = world,
             refStore = refStore,
             name = nameArgument.get(context),
+            ping = (pingArg.get(context) ?: 0).toLong(),
             amount = amountArgument.get(context),
             stack = stackArgument.get(context) ?: false,
             center = centerArgument.get(context) ?: false,
